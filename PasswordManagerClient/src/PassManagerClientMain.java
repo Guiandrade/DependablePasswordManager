@@ -1,10 +1,11 @@
+import java.rmi.RemoteException;
 
 public class PassManagerClientMain {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws RemoteException {
 		PassManagerClient client = new PassManagerClient();
-		client.setup(0); // 0 is default_value for client id
-		ClientMenu menu = new ClientMenu();
+		client.setup();
+		ClientMenu menu = new ClientMenu(client);
 		while(true){
 			menu.display();
 		}            	            

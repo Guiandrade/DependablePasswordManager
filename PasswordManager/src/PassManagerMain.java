@@ -7,7 +7,7 @@ public class PassManagerMain {
 		try {
 				PasswordManager  passManager = new PasswordManager();
 				Naming.rebind("rmi://localhost/pm", passManager);
-	            	            
+            	            
 				System.out.println("Server ready and awaiting connections!");
 				
 			} catch (Exception e){

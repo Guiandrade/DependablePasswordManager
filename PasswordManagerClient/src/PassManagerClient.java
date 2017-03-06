@@ -2,12 +2,16 @@ import java.rmi.Naming;
 
 public class PassManagerClient{
 
+	private PassManagerInterface stub;
+	private String key;
+
 	public PassManagerClient(){}
 
-	public void setup(int clientId){
+	public void setup(){
+
 		try {
-			PassManagerInterface stub = (PassManagerInterface) Naming.lookup("rmi://localhost/pm");
-			String response = stub.startCommunication(clientId);
+			this.stub = (PassManagerInterface) Naming.lookup("rmi://localhost/pm");
+			String response = stub.startCommunication();
 			System.out.println("Response from Server: "+response);  	            
 
 		} catch (Exception e) {
@@ -15,4 +19,17 @@ public class PassManagerClient{
 			e.printStackTrace();
 		}
 	}
+
+	public PassManagerInterface getStub() {
+		return stub;
+	}
+
+	public String getKey() {
+		return key;
+	}
+
+	public void setKey(String key) {
+		this.key = key;
+	}
+
 }
