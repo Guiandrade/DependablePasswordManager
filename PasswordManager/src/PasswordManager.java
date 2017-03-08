@@ -63,7 +63,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			Combination userPassPair = userMap.get(domainStr);
 
 			if (Arrays.equals(userPassPair.getUsername(),username)){
-				System.out.println("Vai Fazer o GOlo!");
 				return userPassPair.getPassword();				
 			}			
 		}
