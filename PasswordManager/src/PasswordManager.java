@@ -11,7 +11,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	private int clientId=0;
 	private ArrayList<String> registeredUsers = new ArrayList<String>();
-
 	private HashMap<String,HashMap<String,Combination>> tripletMap = new  HashMap<String,HashMap<String,Combination>>(); // String will be a Key
 
 	public PasswordManager () throws RemoteException{}
@@ -63,7 +62,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			Combination userPassPair = userMap.get(domainStr);
 
 			if (Arrays.equals(userPassPair.getUsername(),username)){
-				System.out.println("Vai Fazer o GOlo!");
 				return userPassPair.getPassword();				
 			}			
 		}
