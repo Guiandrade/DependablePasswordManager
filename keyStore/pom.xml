@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>pt.ulisboa.ist.sec</groupId>
-  <artifactId>dependablePasswordManager</artifactId>
+  <artifactId>keyStore</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>dependablePasswordManager</name>
+  <name>keyStore</name>
   <url>http://maven.apache.org</url>
 
   <properties>
@@ -15,27 +15,27 @@
   </properties>
 
   <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.3.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>java</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <killAfter>-1</killAfter><!-- to prevent deprecation warning -->
-          <mainClass>pt.ulisboa.ist.sec.PasswordManagerMain</mainClass>
-          <arguments>
-          </arguments>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.3.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>java</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<killAfter>-1</killAfter><!-- to prevent deprecation warning -->
+					<mainClass>pt.ulisboa.ist.sec.KeyStore</mainClass>
+					<arguments>
+					</arguments>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
   <dependencies>
     <dependency>
