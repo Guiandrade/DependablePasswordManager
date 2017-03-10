@@ -13,8 +13,6 @@ public class ClientMenu {
 		this.setClient(client);
 	}
 
-
-
 	public void display() throws RemoteException {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
@@ -52,7 +50,7 @@ public class ClientMenu {
 	public void exit() {
 		// Complete with close() -> concludes the current session of commands with the client library.
 		System.out.println("Exiting...");
-		System.exit(1); 
+		System.exit(1);
 
 	}
 
@@ -62,13 +60,13 @@ public class ClientMenu {
 		byte[] domain = input.nextLine().getBytes();
 		System.out.println("Please insert an username : ");
 		byte[] username = input.nextLine().getBytes();
-		
+
 		PassManagerClient client = getClient();
 		PassManagerInterface stub = client.getStub();
 		String key = client.getKey();
 
 		byte[] response = stub.retrievePassword(key,domain,username);
-		
+
 		if (response == null){
 			return "Error retrieving password .";
 		}

@@ -14,7 +14,7 @@ public class KeyStore
           System.out.println("Please write the number of keypairs wanted : ");
           int maxNumCertificates = in.nextInt()+1;
           for (int id=1; id<(maxNumCertificates) ; id++){
-              KeyPair pair =  CertificateGenerator.generateKeyPair();
+              KeyPair pair =  CertificateGenerator.generateKeyPair(id,maxNumCertificates);
               X509Certificate[] cert = CertificateGenerator.generateCertificate(pair);
               CertificateGenerator.saveToFile(cert,id,maxNumCertificates);
 

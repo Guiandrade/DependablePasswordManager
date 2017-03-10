@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 
-@SuppressWarnings("serial")
 public class PasswordManager extends UnicastRemoteObject implements PassManagerInterface {
 
 	private int clientId=0;
@@ -65,8 +64,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			Combination userPassPair = userMap.get(domainStr);
 
 			if (Arrays.equals(userPassPair.getUsername(),username)){
-				return userPassPair.getPassword();				
-			}			
+				return userPassPair.getPassword();
+			}
 		}
 		return null;
 	}
