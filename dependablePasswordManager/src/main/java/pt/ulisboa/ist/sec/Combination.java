@@ -1,31 +1,40 @@
 package pt.ulisboa.ist.sec;
 
-public class Combination { 
+public class Combination {
 
-	private byte[] username; 
-	private byte[] password; 
+	private String domain;
+	private String username;
 
-	public Combination(byte[] username, byte[]  password) { 
-		this.setUsername(username); 
-		this.setPassword(password); 
+	public Combination(String domain, String  username) {
+		this.setDomain(domain);
+		this.setUsername(username);
 	}
 
-	public byte[] getPassword() {
-		return password;
+	public String getDomain() {
+		return domain;
 	}
 
-	public void setPassword(byte[] password) {
-		this.password = password;
+	public void setDomain(String domain) {
+		this.domain = domain;
 	}
 
-	public byte[]  getUsername() {
+	public String  getUsername() {
 		return username;
 	}
 
-	public void setUsername(byte[]  username) {
+	public void setUsername(String  username) {
 		this.username = username;
-	} 
+	}
+
+	public boolean equalsTo(Combination c){
+		if (c.getDomain().equals(getDomain()) && c.getUsername().equals(getUsername())){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
 
 
 
-} 
+}

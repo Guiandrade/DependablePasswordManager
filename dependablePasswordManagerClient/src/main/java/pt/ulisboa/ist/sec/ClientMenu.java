@@ -3,6 +3,7 @@ package pt.ulisboa.ist.sec;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.Scanner;
+import javax.xml.bind.DatatypeConverter;
 
 public class ClientMenu {
 
@@ -57,33 +58,34 @@ public class ClientMenu {
 	public String retrievePassword() throws RemoteException {
 		// simple for testing purposes
 		System.out.println("Please insert a domain : ");
-		byte[] domain = input.nextLine().getBytes();
+		String domain =  input.nextLine();
+
 		System.out.println("Please insert an username : ");
-		byte[] username = input.nextLine().getBytes();
+		String username =  input.nextLine();
 
 		PassManagerClient client = getClient();
 		PassManagerInterface stub = client.getStub();
 		String key = client.getKey();
 
-		byte[] response = stub.retrievePassword(key,domain,username);
+		String response = stub.retrievePassword(key,domain,username);
 
 		if (response == null){
+			System.out.println("Error retrieving password .");
 			return "Error retrieving password .";
 		}
-		String pass = new String(response, StandardCharsets.UTF_8);
-		System.out.println("Your password is: "+ pass);
-		return pass;
+		System.out.println("Your password is: "+ response);
+		return response;
 
 	}
 
 	public void savePassword() throws RemoteException {
 		// simple for testing purposes
 		System.out.println("Please insert a domain : ");
-		byte[] domain = input.nextLine().getBytes();
+		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");
-		byte[]  username = input.nextLine().getBytes();
+		String  username =  input.nextLine();
 		System.out.println("Please insert the password: ");
-		byte[]  pass = input.nextLine().getBytes();
+		String  pass =  input.nextLine();
 
 		String response = getClient().getStub().savePassword(getClient().getKey(),domain,username,pass);
 		System.out.println(response);
