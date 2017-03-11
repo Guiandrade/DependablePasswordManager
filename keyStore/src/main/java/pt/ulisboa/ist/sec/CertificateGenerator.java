@@ -14,9 +14,9 @@ import java.nio.charset.Charset;
 
 public class CertificateGenerator {
 
-    private static String certificatePath = "src/main/java/pt/ulisboa/ist/sec/certificates/certificate";
-    private static String publicKeyPath = "src/main/java/pt/ulisboa/ist/sec/publicKeys/publickey";
-    private static String privateKeyPath = "src/main/java/pt/ulisboa/ist/sec/privateKeys/privatekey";
+    private static String certificatePath = "security/certificates/certificate";
+    private static String publicKeyPath = "security/publicKeys/publickey";
+    private static String privateKeyPath = "security/privateKeys/privatekey";
 
     public static X509Certificate[] generateCertificate(KeyPair pair) throws Exception {
         X509CertInfo info = new X509CertInfo();
