@@ -7,12 +7,14 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-
+import javax.xml.bind.DatatypeConverter;
+import java.security.*;
+import javax.crypto.*;
 
 public class PasswordManager extends UnicastRemoteObject implements PassManagerInterface {
 
-	private int clientId=0;
-	private ArrayList<String> registeredUsers = new ArrayList<String>();
+	private int clientId=1;
+	private HashMap<String,Combination> registeredUsers = new HashMap<String,Combination>();
 	private HashMap<String,HashMap<Combination,String> > tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 
 	public PasswordManager () throws RemoteException {
@@ -24,14 +26,17 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return "Connected with server!";
 	}
 
-	public String registerUser(String key) throws RemoteException {
+	public String registerUser(String key) throws RemoteException, NoSuchAlgorithmException  {
 		// Add Key to Keystore to Register User
-		if (getRegisteredUsers().contains(key)) {
+		if (getRegisteredUsers().containsKey(key)) {
 			System.out.println("Error registering user. ");
 			return "Error: Could not register user.";
 		}
 		else{
-			getRegisteredUsers().add(key);
+			String secretKey = generateSecretKey();
+			String nounce = String.valueOf(0);
+			Combination combination = new Combination(secretKey,nounce);
+			getRegisteredUsers().put(key,combination);
 			System.out.println("User with key " +key+" registered ");
 			return "User successfully registered!";
 		}
@@ -39,7 +44,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String savePassword(String key, String domain, String username, String password) throws RemoteException {
-		if (getRegisteredUsers().contains(key) && key!= null) {
+		if (getRegisteredUsers().containsKey(key) && key!= null) {
 			HashMap<Combination, String> domainsMap;
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
@@ -60,7 +65,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String retrievePassword(String key,String domain, String username) throws RemoteException {
-		if (getRegisteredUsers().contains(key) && key!= null) {
+		if (getRegisteredUsers().containsKey(key) && key!= null) {
 			Combination combination = new Combination (domain,username);
 			HashMap<Combination,String> userMap = tripletMap.get(key);
 			String result = checkCombination(combination,userMap);
@@ -75,7 +80,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	}
 
-	public ArrayList<String> getRegisteredUsers() {
+	public HashMap<String,Combination> getRegisteredUsers() {
 		return registeredUsers;
 	}
 
@@ -86,6 +91,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			}
 		}
 		return null;
+	}
+
+	public String generateSecretKey() throws NoSuchAlgorithmException{
+		// generate MAC secret key
+		SecureRandom nonce_scr = new SecureRandom();
+    KeyGenerator keyGen = KeyGenerator.getInstance("HmacMD5");
+    keyGen.init(nonce_scr);
+    SecretKey sk = keyGen.generateKey();
+
+		return DatatypeConverter.printBase64Binary(sk.getEncoded());
 	}
 
 

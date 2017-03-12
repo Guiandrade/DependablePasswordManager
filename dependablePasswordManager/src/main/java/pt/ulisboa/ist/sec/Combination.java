@@ -2,28 +2,37 @@ package pt.ulisboa.ist.sec;
 
 public class Combination {
 
-	private String domain;
-	private String username;
+	private String attribute1;
+	private String attribute2;
 
-	public Combination(String domain, String  username) {
-		this.setDomain(domain);
-		this.setUsername(username);
+	public Combination(String x, String  y) {
+		// x is domain or secretNum and y is username or nounce
+		this.setAttribute1(x);
+		this.setAttribute2(y);
 	}
 
 	public String getDomain() {
-		return domain;
+		return attribute1;
 	}
 
-	public void setDomain(String domain) {
-		this.domain = domain;
+	public String getSecretNum() {
+		return attribute1;
 	}
 
 	public String  getUsername() {
-		return username;
+		return attribute2;
 	}
 
-	public void setUsername(String  username) {
-		this.username = username;
+	public String  getNounce() {
+		return attribute2;
+	}
+
+	public void setAttribute1(String str) {
+		this.attribute1 = str;
+	}
+
+	public void setAttribute2(String  str) {
+		this.attribute1= str;
 	}
 
 	public boolean equalsTo(Combination c){
