@@ -3,6 +3,8 @@ package pt.ulisboa.ist.sec;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.Scanner;
+
+import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
 
 public class ClientMenu {
@@ -83,10 +85,25 @@ public class ClientMenu {
 		System.out.println("Please insert a domain : ");
 		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");
-		String  username =  input.nextLine();
+		String username =  input.nextLine();
 		System.out.println("Please insert the password: ");
-		String  pass =  input.nextLine();
-
+		String pass =  input.nextLine();
+		
+		/*String publickKeyStr = getClient().getKey();
+		
+		// CIPHERING OF THE VARIABLES
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);  
+        byte[] c_domain = cipher.doFinal(domain.getBytes("UTF-8"));
+        byte[] c_username = cipher.doFinal(username.getBytes("UTF-8"));
+        byte[] c_password = cipher.doFinal(password.getBytes("UTF-8"));
+        
+        String send_domain = DatatypeConverter.printBase64Binary(c_domain);
+        String send_username = DatatypeConverter.printBase64Binary(c_username);
+        String send_password = DatatypeConverter.printBase64Binary(c_password);
+      
+        String message = publickKeyStr + "-" + n + "-" + send_domain + "-" + send_username + "-" + send_password;
+*/
 		String response = getClient().getStub().savePassword(getClient().getKey(),domain,username,pass);
 		System.out.println(response);
 	}
