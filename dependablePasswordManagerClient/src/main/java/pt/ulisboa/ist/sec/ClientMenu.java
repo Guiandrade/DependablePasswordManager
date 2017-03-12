@@ -3,9 +3,11 @@ package pt.ulisboa.ist.sec;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.Scanner;
-
 import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
+import java.io.*;
+import java.security.*;
+import java.security.spec.*;
 
 public class ClientMenu {
 
@@ -16,7 +18,7 @@ public class ClientMenu {
 		this.setClient(client);
 	}
 
-	public void display() throws RemoteException {
+	public void display() throws RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
 				"Select an option: \n" +
@@ -58,7 +60,6 @@ public class ClientMenu {
 	}
 
 	public String retrievePassword() throws RemoteException {
-		// simple for testing purposes
 		System.out.println("Please insert a domain : ");
 		String domain =  input.nextLine();
 
@@ -67,7 +68,7 @@ public class ClientMenu {
 
 		PassManagerClient client = getClient();
 		PassManagerInterface stub = client.getStub();
-		String key = client.getKey();
+		String key = client.getPublicKey();
 
 		String response = stub.retrievePassword(key,domain,username);
 
@@ -80,44 +81,40 @@ public class ClientMenu {
 
 	}
 
-	public void savePassword() throws RemoteException {
-		// simple for testing purposes
+	public void savePassword() throws RemoteException{
 		System.out.println("Please insert a domain : ");
 		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");
 		String username =  input.nextLine();
 		System.out.println("Please insert the password: ");
 		String pass =  input.nextLine();
-		
+
 		/*String publickKeyStr = getClient().getKey();
-		
+
 		// CIPHERING OF THE VARIABLES
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);  
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] c_domain = cipher.doFinal(domain.getBytes("UTF-8"));
         byte[] c_username = cipher.doFinal(username.getBytes("UTF-8"));
         byte[] c_password = cipher.doFinal(password.getBytes("UTF-8"));
-        
+
         String send_domain = DatatypeConverter.printBase64Binary(c_domain);
         String send_username = DatatypeConverter.printBase64Binary(c_username);
         String send_password = DatatypeConverter.printBase64Binary(c_password);
-      
+
         String message = publickKeyStr + "-" + n + "-" + send_domain + "-" + send_username + "-" + send_password;
 */
-		String response = getClient().getStub().savePassword(getClient().getKey(),domain,username,pass);
+		String response = getClient().getStub().savePassword(getClient().getPublicKey(),domain,username,pass);
 		System.out.println(response);
 	}
 
-	public void registerUser() throws RemoteException {
-		// simple for testing purposes
-		if(getClient().getKey()!= null) {
+	public void registerUser() throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException{
+		if(getClient().getPublicKey()!= null) {
 			System.out.println("User already registered");
 			return;
 		}
-		System.out.println("Please insert a key : ");
-		String key = input.nextLine();
-		getClient().setKey(key);
-		String response = getClient().getStub().registerUser(key);
+		getClient().setPublicKey(); // Find key on file
+		String response = getClient().getStub().registerUser(getClient().getPublicKey());
 		System.out.println(response);
 	}
 

@@ -100,33 +100,5 @@ public class CertificateGenerator {
              os.close();
          }
    }
-/*
-   public static KeyPair loadKeyPair(String path, String algorithm)
-    // to use on client
-     throws IOException, NoSuchAlgorithmException,
-     InvalidKeySpecException {
-     // Read Public Key.
-     File filePublicKey = new File(path + "/public.key");
-     FileInputStream fis = new FileInputStream(path + "/public.key");
-     byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
-     fis.read(encodedPublicKey);
-     fis.close();
 
-     // Read Private Key.
-     File filePrivateKey = new File(path + "/private.key");
-     fis = new FileInputStream(path + "/private.key");
-     byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
-     fis.read(encodedPrivateKey);
-     fis.close();
-
-     // Generate KeyPair.
-     KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
-     X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
-     PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-     PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
-     PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
-
-     return new KeyPair(publicKey, privateKey);
-   }*/
 }
