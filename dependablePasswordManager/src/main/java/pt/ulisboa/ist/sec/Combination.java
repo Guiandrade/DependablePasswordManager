@@ -26,6 +26,10 @@ public class Combination {
 	public String  getNounce() {
 		return attribute2;
 	}
+	
+	public void setNounce(String nounce) {
+		attribute2 = nounce;
+	}
 
 	public boolean equalsTo(Combination c){
 		if (c.getDomain().equals(getDomain()) && c.getUsername().equals(getUsername())){
