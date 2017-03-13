@@ -7,8 +7,8 @@ public class Combination {
 
 	public Combination(String x, String  y) {
 		// x is domain or secretNum and y is username or nounce
-		this.setAttribute1(x);
-		this.setAttribute2(y);
+		attribute1 = x;
+		attribute2 = y;
 	}
 
 	public String getDomain() {
@@ -25,14 +25,6 @@ public class Combination {
 
 	public String  getNounce() {
 		return attribute2;
-	}
-
-	public void setAttribute1(String str) {
-		this.attribute1 = str;
-	}
-
-	public void setAttribute2(String  str) {
-		this.attribute1= str;
 	}
 
 	public boolean equalsTo(Combination c){

@@ -98,14 +98,15 @@ public class ClientMenu {
 		System.out.println(response);
 	}
 
-	public void registerUser() throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException{
+	public void registerUser() throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		if(getClient().getPublicKey()!= null) {
 			System.out.println("User already registered");
 			return;
 		}
 		getClient().setPublicKey(); // Find key on file
 		String response = getClient().getStub().registerUser(getClient().getPublicKeyString());
-		System.out.println(response);
+		System.out.println("User registered successfuly!");
+		getClient().setSecretNumber(response);
 	}
 
 	public PassManagerClient getClient() {
