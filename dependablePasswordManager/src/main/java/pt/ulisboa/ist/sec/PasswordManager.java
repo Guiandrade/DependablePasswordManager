@@ -20,29 +20,29 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	private int clientId=1;
 	private HashMap<String,Combination> registeredUsers = new HashMap<String,Combination>();
-	private HashMap<String,HashMap<Combination,String> > tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
+	private HashMap<String,HashMap<Combination,String>> tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 
 	public PasswordManager () throws RemoteException {
 	}
-	
+
 	public byte[] stringToByte(String str) {
 		return DatatypeConverter.parseBase64Binary(str);
 	}
-	
+
 	public String byteToString(byte[] byt) {
 		return DatatypeConverter.printBase64Binary(byt);
 	}
-	
-	public byte[] mac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
+
+	public byte[] convertMsgToMac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
 		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
         authenticator.init(sk);
         byte[] msg = message.getBytes("UTF-8");
         byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
 		return clientMsgAuthenticator;
 	}
-	
+
 	public byte[] cipherSk(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         cipher.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] c_message = cipher.doFinal(stringToByte(message));
         return c_message;
@@ -65,21 +65,21 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			String nounce = String.valueOf(0);
 			Combination combination = new Combination(secretKey,nounce);
 			getRegisteredUsers().put(key,combination);
-			
+
 			byte[] pk = stringToByte(key);
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 			X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
 			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-			
+
 			byte[] cipheredSecKey = cipherSk(secretKey,publicKey);
-			
+
 			//System.out.println("User with key " +key+" registered ");
 			return byteToString(cipheredSecKey);
 		}
 
 	}
 	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException {
-		
+
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
         /*for(int i = 0;i<parts.length;i++){
@@ -89,13 +89,19 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
         System.out.println("Domain: "+parts[1]);
         System.out.println("Username: "+parts[2]);
         System.out.println("Password: "+parts[3]);
-        
-        String secNum = getRegisteredUsers().get(parts[0]).getDomain();
+
+				String key = parts[0];
+				String domain = parts[1];
+				String username = parts[2];
+				String pass = parts[3];
+				String mac = parts[4];
+
+        String secNum = getRegisteredUsers().get(key).getDomain();
         byte [] keyByte = stringToByte(secNum);
         SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
-        if(parts[4].equals(byteToString(mac(msg,originalKey)))){
+        if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
         	System.out.println("MAC matching");
-        	savePasswordHash(parts[0],parts[1],parts[2],parts[3]);
+        	savePasswordHash(key,domain,username,pass);
         	return "Password Saved";
         }
         else {
@@ -159,7 +165,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		SecureRandom nonce_scr = new SecureRandom();
 		KeyGenerator keyGen = KeyGenerator.getInstance("HmacMD5");
 		keyGen.init(nonce_scr);
-		SecretKey sk = keyGen.generateKey();		
+		SecretKey sk = keyGen.generateKey();
 
 		return DatatypeConverter.printBase64Binary(sk.getEncoded());
 	}
