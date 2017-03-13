@@ -42,8 +42,21 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 
 	}
+	public String savePassword(String message) throws RemoteException {
+		String msg="";
+		String[] parts = message.split("-");
+        for(int i = 0;i<parts.length;i++){
+        	System.out.println(parts[i]);
+        }
+        System.out.println("Key " + parts[0]);
+        System.out.println("Domain "+parts[1]);
+        System.out.println("Username "+parts[2]);
+        System.out.println("Password "+parts[3]);
+        savePasswordHash(parts[0],parts[1],parts[2],parts[3]);
+		return msg;
+	}
 
-	public String savePassword(String key, String domain, String username, String password) throws RemoteException {
+	public String savePasswordHash(String key, String domain, String username, String password) throws RemoteException {
 		if (getRegisteredUsers().containsKey(key) && key!= null) {
 			HashMap<Combination, String> domainsMap;
 			if (tripletMap.get(key)!= null){
