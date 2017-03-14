@@ -10,7 +10,7 @@ public class KeyStore
 
       try{
           int maxNumCertificates = chooseNumber();
-          for (int id=1; id<(maxNumCertificates) ; id++){
+          for (int id=0; id<(maxNumCertificates) ; id++){
               KeyPair pair =  CertificateGenerator.generateKeyPair(id,maxNumCertificates);
               X509Certificate[] cert = CertificateGenerator.generateCertificate(pair);
               CertificateGenerator.saveToFile(cert,id,maxNumCertificates);

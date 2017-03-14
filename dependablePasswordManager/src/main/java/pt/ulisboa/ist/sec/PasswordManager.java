@@ -10,19 +10,23 @@ import java.util.Arrays;
 import java.util.HashMap;
 import javax.xml.bind.DatatypeConverter;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-
+import java.io.*;
+import java.security.spec.*;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 
 public class PasswordManager extends UnicastRemoteObject implements PassManagerInterface {
 
 	private int clientId=1;
+	private int certificateNum=0;
 	private HashMap<String,Combination> registeredUsers = new HashMap<String,Combination>();
 	private HashMap<String,HashMap<Combination,String>> tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
+	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
+	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
+	private PublicKey pubKey;
 
-	public PasswordManager () throws RemoteException {
+	public PasswordManager () throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+		setPublicKey();
 	}
 
 	public byte[] stringToByte(String str) {
@@ -168,5 +172,35 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		SecretKey sk = keyGen.generateKey();
 
 		return DatatypeConverter.printBase64Binary(sk.getEncoded());
+	}
+
+	public void setPublicKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+		// Read Public Key.
+		File filePublicKey = new File(publicKeyPath + certificateNum +".key");
+		FileInputStream fis = new FileInputStream(publicKeyPath + certificateNum +".key");
+		byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
+		fis.read(encodedPublicKey);
+		fis.close();
+
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+		pubKey = publicKey;
+	}
+
+	public PrivateKey getPrivateKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+		// Read Private Key.
+		File filePrivateKey = new File(privateKeyPath + certificateNum+ ".key");
+		FileInputStream fis = new FileInputStream(privateKeyPath + certificateNum+ ".key");
+		byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
+		fis.read(encodedPrivateKey);
+		fis.close();
+
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
+		PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+
+		return privateKey;
 	}
 }

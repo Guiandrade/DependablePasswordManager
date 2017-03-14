@@ -3,10 +3,13 @@ package pt.ulisboa.ist.sec;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Scanner;
+import java.io.IOException;
+import java.security.*;
+import java.security.spec.*;
 
 public class PasswordManagerMain
 {
-	public static void main(String args[]){
+	public static void main(String args[]) throws IOException, NoSuchAlgorithmException,InvalidKeySpecException{
 		int registryPort = 8081;
         try{
             PasswordManager passManager = new PasswordManager();
