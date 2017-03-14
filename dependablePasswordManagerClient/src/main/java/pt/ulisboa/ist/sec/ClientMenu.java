@@ -85,7 +85,7 @@ public class ClientMenu {
 
 	}
 
-	public void savePassword() throws RemoteException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException{
+	public void savePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException{
 		System.out.println("Please insert a domain : ");
 		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");
@@ -95,7 +95,8 @@ public class ClientMenu {
 
 		String message = getClient().messageToSend(domain, username, pass);
 		String response = getClient().getStub().savePassword(message);
-		System.out.println(response);
+		String finalResponse = getClient().checkSavedPassword(response);
+		System.out.println(finalResponse);
 	}
 
 	public void registerUser() throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{

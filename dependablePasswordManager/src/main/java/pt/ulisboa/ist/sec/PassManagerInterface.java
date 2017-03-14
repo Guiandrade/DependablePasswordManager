@@ -18,7 +18,7 @@ public interface PassManagerInterface extends Remote{
 
 	public String startCommunication() throws RemoteException;
 	public String registerUser(String key) throws RemoteException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException;;
-	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException;
+	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException;
 	public String retrievePassword(String key,String domain, String username) throws RemoteException;
 	public void close() throws RemoteException;
 }

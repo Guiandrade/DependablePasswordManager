@@ -39,17 +39,32 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public byte[] convertMsgToMac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
 		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
-        authenticator.init(sk);
-        byte[] msg = message.getBytes("UTF-8");
-        byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
+		authenticator.init(sk);
+		byte[] msg = message.getBytes("UTF-8");
+		byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
 		return clientMsgAuthenticator;
 	}
 
 	public byte[] cipherSk(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        byte[] c_message = cipher.doFinal(stringToByte(message));
-        return c_message;
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+		byte[] c_message = cipher.doFinal(stringToByte(message));
+		return c_message;
+	}
+
+	public byte[] cipher(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
+		return c_message;
+	}
+
+	public PublicKey getClientPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
+		byte[] pk = stringToByte(key);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+		return publicKey;
 	}
 
 	public String startCommunication() throws RemoteException {
@@ -70,48 +85,61 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			Combination combination = new Combination(secretKey,nounce);
 			getRegisteredUsers().put(key,combination);
 
-			byte[] pk = stringToByte(key);
-			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-			X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
-			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-			byte[] cipheredSecKey = cipherSk(secretKey,publicKey);
+			byte[] cipheredSecKey = cipherSk(secretKey,getClientPublicKey(key));
 
 			//System.out.println("User with key " +key+" registered ");
 			return byteToString(cipheredSecKey);
 		}
 
 	}
-	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException {
+	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
 
 		String[] parts = message.split("-");
-		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
-        /*for(int i = 0;i<parts.length;i++){
+		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
+		/*for(int i = 0;i<parts.length;i++){
         	System.out.println(parts[i]);
         }*/
-        System.out.println("Key: " + parts[0] + "\n");
-        System.out.println("Domain: "+parts[1]);
-        System.out.println("Username: "+parts[2]);
-        System.out.println("Password: "+parts[3]);
+		System.out.println("Key: " + parts[0] + "\n");
+		System.out.println("Nonce: "+parts[1]);
+		System.out.println("Domain: "+parts[2]);
+		System.out.println("Username: "+parts[3]);
+		System.out.println("Password: "+parts[4]);
 
-				String key = parts[0];
-				String domain = parts[1];
-				String username = parts[2];
-				String pass = parts[3];
-				String mac = parts[4];
+		String key = parts[0];
+		String nonce = parts[1];
+		String domain = parts[2];
+		String username = parts[3];
+		String pass = parts[4];
+		String mac = parts[5];
+		String clientNonce = getRegisteredUsers().get(key).getNounce();
+		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+		String secNum = getRegisteredUsers().get(key).getDomain();
+		byte [] keyByte = stringToByte(secNum);
+		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
-        String secNum = getRegisteredUsers().get(key).getDomain();
-        byte [] keyByte = stringToByte(secNum);
-        SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
-        if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
-        	System.out.println("MAC matching");
-        	savePasswordHash(key,domain,username,pass);
-        	return "Password Saved";
-        }
-        else {
-        	System.out.println("MAC not matching");
-        	return "Error saving password, try again";
-        }
+		if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
+			System.out.println("MAC matching");
+
+			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
+				System.out.println("Nonce confirmed");
+				savePasswordHash(key,domain,username,pass);
+				getRegisteredUsers().get(key).setNounce(requestNonce);
+				byte[] response = cipher("Password Saved-" + requestNonce,getClientPublicKey(key));
+				return byteToString(response);
+			}
+
+			else {
+				System.out.println("Nonce incorrect");
+				byte[] response = cipher("Error-"+clientNonce,getClientPublicKey(key));
+				return byteToString(response);
+			}
+
+		}
+		else {
+			System.out.println("MAC not matching");
+			byte[] response = cipher("Error-"+clientNonce,getClientPublicKey(key));
+			return byteToString(response);
+		}
 	}
 
 	public String savePasswordHash(String key, String domain, String username, String password) throws RemoteException {
