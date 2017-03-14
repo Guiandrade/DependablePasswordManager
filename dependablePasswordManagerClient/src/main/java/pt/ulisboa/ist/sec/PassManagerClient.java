@@ -19,6 +19,7 @@ public class PassManagerClient{
 	private PassManagerInterface passManagerInt;
 	private PublicKey pubKey;
 	private SecretKey secKey;
+	private PublicKey serverKey;
 	private int nonce;
 	private int id;
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
@@ -26,6 +27,14 @@ public class PassManagerClient{
 
 	public PassManagerClient(int id){
 		this.id = id;
+	}
+	
+	public PublicKey getServerPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
+		byte[] pk = stringToByte(key);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+		return publicKey;
 	}
 
 	public void setup(){
@@ -43,6 +52,10 @@ public class PassManagerClient{
 
 	public PublicKey getPublicKey() {
 		return pubKey;
+	}
+	
+	public PublicKey getServerPublicKey() {
+		return serverKey;
 	}
 
 	public String getPublicKeyString() {
@@ -65,9 +78,16 @@ public class PassManagerClient{
 		return byteToString(clientMsgAuthenticator);
 	}
 
-	public byte[] cipher(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+	public byte[] cipherCPubK(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
+		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
+		return c_message;
+	}
+	
+	public byte[] cipherSPubK(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, getServerPublicKey());
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
 	}
@@ -119,9 +139,9 @@ public class PassManagerClient{
 	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
-		byte[] c_domain = cipher(domain);
-		byte[] c_username = cipher(username);
-		byte[] c_password = cipher(pass);
+		byte[] c_domain = cipherSPubK(domain);
+		byte[] c_username = cipherSPubK(username);
+		byte[] c_password = cipherCPubK(pass);
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);
@@ -163,7 +183,11 @@ public class PassManagerClient{
 
 	public void setSecretNumber(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 		nonce = 0;
-		byte [] keyByte = decipherSk(response);
+		String[] parts = response.split("-");
+		String cipheredSecKey = parts[0];
+		String serverPubKey = parts[1];
+		serverKey = getServerPublicKey(serverPubKey);
+		byte [] keyByte = decipherSk(cipheredSecKey);
 		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 		secKey = originalKey;
 	}

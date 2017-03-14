@@ -1,7 +1,6 @@
 package pt.ulisboa.ist.sec;
 
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -58,6 +57,13 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
 	}
+	
+	public byte[] decipher(String c_message, PrivateKey privateKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.DECRYPT_MODE, privateKey);
+		byte[] message = cipher.doFinal(stringToByte(c_message));
+		return message;
+	}
 
 	public PublicKey getClientPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
 		byte[] pk = stringToByte(key);
@@ -86,34 +92,37 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			getRegisteredUsers().put(key,combination);
 
 			byte[] cipheredSecKey = cipherSk(secretKey,getClientPublicKey(key));
+			String publicKey = byteToString(pubKey.getEncoded());
 
-			//System.out.println("User with key " +key+" registered ");
-			return byteToString(cipheredSecKey);
+			return byteToString(cipheredSecKey) + "-" + publicKey;
 		}
 
 	}
-	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
+	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
-		/*for(int i = 0;i<parts.length;i++){
-        	System.out.println(parts[i]);
-        }*/
-		System.out.println("Key: " + parts[0] + "\n");
-		System.out.println("Nonce: "+parts[1]);
-		System.out.println("Domain: "+parts[2]);
-		System.out.println("Username: "+parts[3]);
-		System.out.println("Password: "+parts[4]);
-
 		String key = parts[0];
 		String nonce = parts[1];
-		String domain = parts[2];
-		String username = parts[3];
+		String cipheredDomain = parts[2];
+		String cipheredUsername = parts[3];
+		byte[] decipheredDomain = decipher(cipheredDomain,getPrivateKey());
+		byte[] decipheredUsername = decipher(cipheredUsername,getPrivateKey());
+		String domain = new String(decipheredDomain, "UTF-8");
+		String username = new String(decipheredUsername, "UTF-8");
 		String pass = parts[4];
 		String mac = parts[5];
 		String clientNonce = getRegisteredUsers().get(key).getNounce();
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 		String secNum = getRegisteredUsers().get(key).getDomain();
+		
+		System.out.println("Key: " + key);
+		System.out.println("Nonce: "+nonce);
+		System.out.println("Domain: "+domain);
+		System.out.println("Username: "+username);
+		System.out.println("Password: "+pass+"\n");
+		
+		
 		byte [] keyByte = stringToByte(secNum);
 		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
