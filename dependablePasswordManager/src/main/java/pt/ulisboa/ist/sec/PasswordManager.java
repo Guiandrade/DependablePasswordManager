@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.*;
-import java.security.PublicKey;
 import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,23 +102,18 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return "Error: Could not validate signature.";
 	}
 
-	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
 
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
 		String key = parts[0];
 		String nonce = parts[1];
-		String cipheredDomain = parts[2];
-		String cipheredUsername = parts[3];
-		byte[] decipheredDomain = decipher(cipheredDomain,getPrivateKey());
-		byte[] decipheredUsername = decipher(cipheredUsername,getPrivateKey());
-		String domain = new String(decipheredDomain, "UTF-8");
-		String username = new String(decipheredUsername, "UTF-8");
+		String domain = parts[2];
+		String username = parts[3];
 		String pass = parts[4];
-		String mac = parts[5];
+		String signature = parts[5];
 		String clientNonce = getRegisteredUsers().get(key).getNounce();
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
-		String secNum = getRegisteredUsers().get(key).getDomain();
 
 		System.out.println("\nKey: " + key);
 		System.out.println("Nonce: "+nonce);
@@ -128,32 +122,40 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		System.out.println("Password: "+pass);
 
 
-		byte [] keyByte = stringToByte(secNum);
-		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
+		//byte [] keyByte = stringToByte(secNum);
+		//SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
-		if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
-			System.out.println("MAC matching");
+		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+			System.out.println("Verified Signature!");
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 				System.out.println("Nonce confirmed");
 				savePasswordHash(key,domain,username,pass);
 				getRegisteredUsers().get(key).setNounce(requestNonce);
-				byte[] response = cipher("Password Saved-" + requestNonce,getClientPublicKey(key));
-				//Tiago aplica aqui a DigitalSignature antes de enviar
-				return byteToString(response);
+				byte[] response = cipher("Password Saved",getClientPublicKey(key));
+				String responseStr = byteToString(response);
+				String responseMsg = responseStr + "-" + requestNonce;
+				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
+				return responseMsg + "-" + sig;
 			}
 
 			else {
 				System.out.println("Nonce incorrect");
-				byte[] response = cipher("Error-"+clientNonce,getClientPublicKey(key));
-				return byteToString(response);
+				byte[] response = cipher("Error",getClientPublicKey(key));
+				String responseStr = byteToString(response);
+				String responseMsg = responseStr + "-" + clientNonce;
+				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
+				return responseMsg + "-" + sig;
 			}
 
 		}
 		else {
-			System.out.println("MAC not matching");
-			byte[] response = cipher("Error-"+clientNonce,getClientPublicKey(key));
-			return byteToString(response);
+			System.out.println("Signature not verified");
+			byte[] response = cipher("Error",getClientPublicKey(key));
+			String responseStr = byteToString(response);
+			String responseMsg = responseStr + "-" + clientNonce;
+			String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
+			return responseMsg + "-" + sig;
 		}
 	}
 
@@ -178,20 +180,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	}
 
-	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
 		//Tiago aplica o DigitalSignature antes de enviar
 
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
 		String key = parts[0];
 		String nonce = parts[1];
-		String cipheredDomain = parts[2];
-		String cipheredUsername = parts[3];
-		byte[] decipheredDomain = decipher(cipheredDomain,getPrivateKey());
-		byte[] decipheredUsername = decipher(cipheredUsername,getPrivateKey());
-		String domain = new String(decipheredDomain, "UTF-8");
-		String username = new String(decipheredUsername, "UTF-8");
-		String mac = parts[4];
+		String domain = parts[2];
+		String username = parts[3];
+		String signature = parts[4];
 		String clientNonce = getRegisteredUsers().get(key).getNounce();
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 		String secNum = getRegisteredUsers().get(key).getDomain();
@@ -202,38 +200,37 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		System.out.println("Username: "+username);
 
 
-		byte [] keyByte = stringToByte(secNum);
-		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
+		//byte [] keyByte = stringToByte(secNum);
+		//SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
-		if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
-			System.out.println("MAC matching");
+		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+			System.out.println("Verified Signature!");
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 				System.out.println("Nonce confirmed");
 
 				if (getRegisteredUsers().containsKey(key) && key!= null) {
 					getRegisteredUsers().get(key).setNounce(requestNonce);
-					System.out.println("User lá");
 					Combination combination = new Combination (domain,username);
 					HashMap<Combination,String> userMap = tripletMap.get(key);
 					String result = checkCombination(combination,userMap);
 					if ( result != null) {
 						String messageToSend = result + "-" + requestNonce;
-						String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
-						return messageToSend + "-" + macToSend;
+						String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+						return messageToSend + "-" + sig;
 					}
 					else {
 						byte[] response = cipher("Entry doesnt exist!",getClientPublicKey(key));
 						String messageToSend = byteToString(response) + "-"+requestNonce;
-						String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
-						return messageToSend + "-" + macToSend;
+						String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+						return messageToSend + "-" + sig;
 					}
 				}
 				else {
 					byte[] response = cipher("Error",getClientPublicKey(key));
 					String messageToSend = byteToString(response) + "-"+clientNonce;
-					String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
-					return messageToSend + "-" + macToSend;
+					String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+					return messageToSend + "-" + sig;
 				}
 			}
 
@@ -241,17 +238,17 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				System.out.println("Nonce incorrect");
 				byte[] response = cipher("Error",getClientPublicKey(key));
 				String messageToSend = byteToString(response) + "-"+clientNonce;
-				String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
-				return messageToSend + "-" + macToSend;
+				String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+				return messageToSend + "-" + sig;
 			}
 
 		}
 		else {
-			System.out.println("MAC not matching");
+			System.out.println("Signature not verified");
 			byte[] response = cipher("Error",getClientPublicKey(key));
 			String messageToSend = byteToString(response) + "-"+clientNonce;
-			String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
-			return messageToSend + "-" + macToSend;
+			String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+			return messageToSend + "-" + sig;
 		}
 	}
 

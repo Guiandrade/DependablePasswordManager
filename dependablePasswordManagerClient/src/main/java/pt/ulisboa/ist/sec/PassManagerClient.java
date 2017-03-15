@@ -80,8 +80,15 @@ public class PassManagerClient{
 		return byteToString(clientMsgAuthenticator);
 	}
 
-	public byte[] cipherCPubK(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+	public byte[] cipherPubKCP(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
+		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
+		return c_message;
+	}
+	
+	public byte[] cipherPubKCNP(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
 		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
@@ -146,14 +153,13 @@ public class PassManagerClient{
 		return clientMsgAuthenticator;
 	}
 
-	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1];
 		String responseMessage = parts[0];
 		String responseNonce = parts[1];
-		String responseMac = parts[2];
-		if(responseMac.equals(byteToString(convertMsgToMac(msg,secKey)))){
-			System.out.println("MAC matching");
+		String responseSignature = parts[2];
+		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(nonce+1 == Integer.parseInt(responseNonce)) {
 				nonce = nonce + 1;
 				byte[] passwordByte = decipher(responseMessage);
@@ -169,16 +175,23 @@ public class PassManagerClient{
 		}
 	}
 
-	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
-		byte[] responseByte = decipher(response);
-		String responseString = new String(responseByte,"UTF-8");
-		String[] parts = responseString.split("-");
+	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException {
+		String[] parts = response.split("-");
+		String msg = parts[0] + parts[1];
 		String responseMessage = parts[0];
 		String responseNonce = parts[1];
-		if(responseMessage.equals("Error") || responseMessage.equals("Password Saved")) {
-			if(nonce+1 == Integer.parseInt(responseNonce)) {
-				nonce = nonce + 1;
-				return responseMessage;
+		String responseSignature = parts[2];
+		byte[] responseByte = decipher(responseMessage);
+		String responseString = new String(responseByte,"UTF-8");
+		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
+			if(responseString.equals("Error") || responseString.equals("Password Saved")) {
+				if(nonce+1 == Integer.parseInt(responseNonce)) {
+					nonce = nonce + 1;
+					return responseString;
+				}
+				else {
+					return "Error";
+				}
 			}
 			else {
 				return "Error";
@@ -189,18 +202,18 @@ public class PassManagerClient{
 		}
 	}
 
-	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
+	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
-		byte[] c_domain = cipherSPubK(domain);
-		byte[] c_username = cipherSPubK(username);
+		byte[] c_domain = cipherPubKCNP(domain);
+		byte[] c_username = cipherPubKCNP(username);
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);
 		String message = "";
 
 		if(!(pass.equals(""))) {
-			byte[] c_password = cipherCPubK(pass);
+			byte[] c_password = cipherPubKCP(pass);
 			String send_password = byteToString(c_password);
 			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
 		}
@@ -208,8 +221,8 @@ public class PassManagerClient{
 			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username;
 		}
 
-		String mac = mac(message,getSecretNumber());
-		message = message + "-" + mac;
+		String signature = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
+		message = message + "-" + signature;
 		return message;
 	}
 
