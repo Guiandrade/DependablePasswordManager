@@ -1,18 +1,19 @@
 package pt.ulisboa.ist.sec;
 
-
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.*;
+import java.security.PublicKey;
+import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import javax.xml.bind.DatatypeConverter;
-import java.security.*;
-import java.io.*;
-import java.security.spec.*;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
+
 
 public class PasswordManager extends UnicastRemoteObject implements PassManagerInterface {
 
@@ -57,7 +58,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
 	}
-	
+
 	public byte[] decipher(String c_message, PrivateKey privateKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.DECRYPT_MODE, privateKey);
@@ -79,13 +80,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return "Connected with server!";
 	}
 
-	public String registerUser(String key) throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
+	public String registerUser(String key,String signature) throws SignatureException,RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
 		// Add Key to Keystore to Register User
 		if (getRegisteredUsers().containsKey(key)) {
 			System.out.println("Error registering user. ");
 			return "Error: Could not register user.";
 		}
-		else{
+		else if (verifySignature(key,signature)){
+			System.out.println("Verified Signature!");
 			String secretKey = generateSecretKey();
 			String nounce = String.valueOf(0);
 			Combination combination = new Combination(secretKey,nounce);
@@ -96,8 +98,24 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			return byteToString(cipheredSecKey) + "-" + publicKey;
 		}
-
+		return "Error: Could not validate signature.";
 	}
+
+	public boolean verifySignature(String pubKeyClient,String signature) throws NoSuchAlgorithmException, InvalidKeySpecException,InvalidKeyException,SignatureException{
+		// verifying a signature
+		byte[] data = "Register Operation".getBytes(); // Replace
+
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(stringToByte(pubKeyClient));
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+		Signature rsaForVerify = Signature.getInstance("SHA1withRSA");
+		rsaForVerify.initVerify(publicKey);
+		rsaForVerify.update(data);
+		boolean verifies = rsaForVerify.verify(stringToByte(signature));
+		return verifies;
+	}
+
 	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 
 		String[] parts = message.split("-");
@@ -115,14 +133,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String clientNonce = getRegisteredUsers().get(key).getNounce();
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 		String secNum = getRegisteredUsers().get(key).getDomain();
-		
+
 		System.out.println("\nKey: " + key);
 		System.out.println("Nonce: "+nonce);
 		System.out.println("Domain: "+domain);
 		System.out.println("Username: "+username);
 		System.out.println("Password: "+pass);
-		
-		
+
+
 		byte [] keyByte = stringToByte(secNum);
 		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
@@ -187,13 +205,13 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String clientNonce = getRegisteredUsers().get(key).getNounce();
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 		String secNum = getRegisteredUsers().get(key).getDomain();
-		
+
 		System.out.println("\nKey: " + key);
 		System.out.println("Nonce: "+nonce);
 		System.out.println("Domain: "+domain);
 		System.out.println("Username: "+username);
-		
-		
+
+
 		byte [] keyByte = stringToByte(secNum);
 		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
@@ -202,7 +220,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 				System.out.println("Nonce confirmed");
-				
+
 				if (getRegisteredUsers().containsKey(key) && key!= null) {
 					getRegisteredUsers().get(key).setNounce(requestNonce);
 					System.out.println("User lá");
@@ -246,7 +264,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			return messageToSend + "-" + macToSend;
 		}
 	}
-	
+
 	public void close() throws RemoteException {
 		// TODO Auto-generated method stub
 

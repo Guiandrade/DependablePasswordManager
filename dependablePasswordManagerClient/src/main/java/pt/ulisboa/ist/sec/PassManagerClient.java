@@ -1,12 +1,12 @@
 package pt.ulisboa.ist.sec;
 
+import java.io.*;
+import java.io.IOException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.security.*;
-import java.io.*;
 import java.security.spec.*;
 import java.util.Base64;
-import javax.xml.bind.DatatypeConverter;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -14,6 +14,7 @@ import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 
 public class PassManagerClient{
 
@@ -210,6 +211,16 @@ public class PassManagerClient{
 		String mac = mac(message,getSecretNumber());
 		message = message + "-" + mac;
 		return message;
+	}
+
+	public String getSignature()  throws IOException, NoSuchAlgorithmException, InvalidKeySpecException,InvalidKeyException,SignatureException{
+		byte[] data = "Register Operation".getBytes(); // Replace
+		// generating a signature
+		Signature rsaForSign = Signature.getInstance("SHA1withRSA");
+		rsaForSign.initSign(getPrivateKey());
+		rsaForSign.update(data);
+		byte[] signature = rsaForSign.sign();
+		return byteToString(signature);
 	}
 
 	public int getId() {

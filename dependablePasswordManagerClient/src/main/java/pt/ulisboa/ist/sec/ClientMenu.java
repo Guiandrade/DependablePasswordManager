@@ -1,17 +1,17 @@
 package pt.ulisboa.ist.sec;
 
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
+import java.security.*;
+import java.security.SignatureException;
+import java.security.spec.*;
 import java.util.Scanner;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.xml.bind.DatatypeConverter;
-import java.io.*;
-import java.security.*;
-import java.security.spec.*;
 
 public class ClientMenu {
 
@@ -22,7 +22,7 @@ public class ClientMenu {
 		this.setClient(client);
 	}
 
-	public void display() throws RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
+	public void display() throws SignatureException,RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
 				"Select an option: \n" +
@@ -93,13 +93,13 @@ public class ClientMenu {
 		System.out.println(finalResponse);
 	}
 
-	public void registerUser() throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	public void registerUser() throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		if(getClient().getPublicKey()!= null) {
 			System.out.println("User already registered");
 			return;
 		}
 		getClient().setPublicKey(); // Find key on file
-		String response = getClient().getStub().registerUser(getClient().getPublicKeyString());
+		String response = getClient().getStub().registerUser(getClient().getPublicKeyString(),getClient().getSignature());
 		System.out.println("User registered successfuly!");
 		getClient().setSecretNumber(response);
 	}

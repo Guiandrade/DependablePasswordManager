@@ -13,7 +13,7 @@ import java.security.spec.*;
 
 public class PassManagerClientMain
 {
-	public static void main( String[] args ) throws RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
+	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
 		Scanner input = new Scanner(System.in);
 		System.out.println("Please insert client id: ");
 		int selection = input.nextInt();
