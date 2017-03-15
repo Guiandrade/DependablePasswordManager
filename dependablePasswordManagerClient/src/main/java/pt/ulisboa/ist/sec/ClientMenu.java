@@ -63,25 +63,19 @@ public class ClientMenu {
 
 	}
 
-	public String retrievePassword() throws RemoteException {
+	public String retrievePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException {
 		System.out.println("Please insert a domain : ");
 		String domain =  input.nextLine();
 
 		System.out.println("Please insert an username : ");
 		String username =  input.nextLine();
 
-		PassManagerClient client = getClient();
-		PassManagerInterface stub = client.getStub();
-		String key = client.getPublicKeyString();
+		String message = getClient().messageToSend(domain, username, "");
+		String response = getClient().getStub().retrievePassword(message);
+		String finalResponse = getClient().checkRetrievedPassword(response);
 
-		String response = stub.retrievePassword(key,domain,username);
-
-		if (response == null){
-			System.out.println("Error retrieving password .");
-			return "Error retrieving password .";
-		}
-		System.out.println("Your password is: "+ response);
-		return response;
+		System.out.println(finalResponse);
+		return finalResponse;
 
 	}
 

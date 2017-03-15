@@ -1,6 +1,7 @@
 package pt.ulisboa.ist.sec;
 
 import java.rmi.Naming;
+import java.rmi.RemoteException;
 import java.security.*;
 import java.io.*;
 import java.security.spec.*;
@@ -28,7 +29,7 @@ public class PassManagerClient{
 	public PassManagerClient(int id){
 		this.id = id;
 	}
-	
+
 	public PublicKey getServerPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
 		byte[] pk = stringToByte(key);
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -53,7 +54,7 @@ public class PassManagerClient{
 	public PublicKey getPublicKey() {
 		return pubKey;
 	}
-	
+
 	public PublicKey getServerPublicKey() {
 		return serverKey;
 	}
@@ -84,7 +85,7 @@ public class PassManagerClient{
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
 	}
-	
+
 	public byte[] cipherSPubK(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.ENCRYPT_MODE, getServerPublicKey());
@@ -136,21 +137,35 @@ public class PassManagerClient{
 		return privateKey;
 	}
 
-	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
-		String publicKey = byteToString(getPublicKey().getEncoded());
+	public byte[] convertMsgToMac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
+		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
+		authenticator.init(sk);
+		byte[] msg = message.getBytes("UTF-8");
+		byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
+		return clientMsgAuthenticator;
+	}
 
-		byte[] c_domain = cipherSPubK(domain);
-		byte[] c_username = cipherSPubK(username);
-		byte[] c_password = cipherCPubK(pass);
-
-		String send_domain = byteToString(c_domain);
-		String send_username = byteToString(c_username);
-		String send_password = byteToString(c_password);
-
-		String message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
-		String mac = mac(message,getSecretNumber());
-		message = message + "-" + mac;
-		return message;
+	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+		String[] parts = response.split("-");
+		String msg = parts[0] + "-" + parts[1];
+		String responseMessage = parts[0];
+		String responseNonce = parts[1];
+		String responseMac = parts[2];
+		if(responseMac.equals(byteToString(convertMsgToMac(msg,secKey)))){
+			System.out.println("MAC matching");
+			if(nonce+1 == Integer.parseInt(responseNonce)) {
+				nonce = nonce + 1;
+				byte[] passwordByte = decipher(responseMessage);
+				String password = new String(passwordByte, "UTF-8");
+				return password;
+			}
+			else {
+				return "Error";
+			}
+		}
+		else {
+			return "Error";
+		}
 	}
 
 	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
@@ -171,6 +186,30 @@ public class PassManagerClient{
 		else {
 			return "Error";
 		}
+	}
+
+	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException {
+		String publicKey = byteToString(getPublicKey().getEncoded());
+
+		byte[] c_domain = cipherSPubK(domain);
+		byte[] c_username = cipherSPubK(username);
+
+		String send_domain = byteToString(c_domain);
+		String send_username = byteToString(c_username);
+		String message = "";
+
+		if(!(pass.equals(""))) {
+			byte[] c_password = cipherCPubK(pass);
+			String send_password = byteToString(c_password);
+			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
+		}
+		else {
+			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username;
+		}
+
+		String mac = mac(message,getSecretNumber());
+		message = message + "-" + mac;
+		return message;
 	}
 
 	public int getId() {

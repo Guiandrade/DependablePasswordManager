@@ -116,11 +116,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 		String secNum = getRegisteredUsers().get(key).getDomain();
 		
-		System.out.println("Key: " + key);
+		System.out.println("\nKey: " + key);
 		System.out.println("Nonce: "+nonce);
 		System.out.println("Domain: "+domain);
 		System.out.println("Username: "+username);
-		System.out.println("Password: "+pass+"\n");
+		System.out.println("Password: "+pass);
 		
 		
 		byte [] keyByte = stringToByte(secNum);
@@ -172,17 +172,81 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	}
 
-	public String retrievePassword(String key,String domain, String username) throws RemoteException {
-		if (getRegisteredUsers().containsKey(key) && key!= null) {
-			Combination combination = new Combination (domain,username);
-			HashMap<Combination,String> userMap = tripletMap.get(key);
-			String result = checkCombination(combination,userMap);
-			if ( result != null) {
-				return result;
+	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+		String[] parts = message.split("-");
+		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
+		String key = parts[0];
+		String nonce = parts[1];
+		String cipheredDomain = parts[2];
+		String cipheredUsername = parts[3];
+		byte[] decipheredDomain = decipher(cipheredDomain,getPrivateKey());
+		byte[] decipheredUsername = decipher(cipheredUsername,getPrivateKey());
+		String domain = new String(decipheredDomain, "UTF-8");
+		String username = new String(decipheredUsername, "UTF-8");
+		String mac = parts[4];
+		String clientNonce = getRegisteredUsers().get(key).getNounce();
+		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+		String secNum = getRegisteredUsers().get(key).getDomain();
+		
+		System.out.println("\nKey: " + key);
+		System.out.println("Nonce: "+nonce);
+		System.out.println("Domain: "+domain);
+		System.out.println("Username: "+username);
+		
+		
+		byte [] keyByte = stringToByte(secNum);
+		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
+
+		if(mac.equals(byteToString(convertMsgToMac(msg,originalKey)))){
+			System.out.println("MAC matching");
+
+			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
+				System.out.println("Nonce confirmed");
+				
+				if (getRegisteredUsers().containsKey(key) && key!= null) {
+					getRegisteredUsers().get(key).setNounce(requestNonce);
+					System.out.println("User lá");
+					Combination combination = new Combination (domain,username);
+					HashMap<Combination,String> userMap = tripletMap.get(key);
+					String result = checkCombination(combination,userMap);
+					if ( result != null) {
+						String messageToSend = result + "-" + requestNonce;
+						String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
+						return messageToSend + "-" + macToSend;
+					}
+					else {
+						byte[] response = cipher("Entry doesnt exist!",getClientPublicKey(key));
+						String messageToSend = byteToString(response) + "-"+requestNonce;
+						String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
+						return messageToSend + "-" + macToSend;
+					}
+				}
+				else {
+					byte[] response = cipher("Error",getClientPublicKey(key));
+					String messageToSend = byteToString(response) + "-"+clientNonce;
+					String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
+					return messageToSend + "-" + macToSend;
+				}
 			}
+
+			else {
+				System.out.println("Nonce incorrect");
+				byte[] response = cipher("Error",getClientPublicKey(key));
+				String messageToSend = byteToString(response) + "-"+clientNonce;
+				String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
+				return messageToSend + "-" + macToSend;
+			}
+
 		}
-		return null; // Exception or Error?
+		else {
+			System.out.println("MAC not matching");
+			byte[] response = cipher("Error",getClientPublicKey(key));
+			String messageToSend = byteToString(response) + "-"+clientNonce;
+			String macToSend = byteToString(convertMsgToMac(messageToSend,originalKey));
+			return messageToSend + "-" + macToSend;
+		}
 	}
+	
 	public void close() throws RemoteException {
 		// TODO Auto-generated method stub
 
