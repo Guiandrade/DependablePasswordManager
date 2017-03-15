@@ -109,7 +109,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(stringToByte(pubKeyClient));
 		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-		Signature rsaForVerify = Signature.getInstance("SHA1withRSA");
+		Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
 		rsaForVerify.initVerify(publicKey);
 		rsaForVerify.update(data);
 		boolean verifies = rsaForVerify.verify(stringToByte(signature));

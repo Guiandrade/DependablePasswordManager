@@ -216,7 +216,7 @@ public class PassManagerClient{
 	public String getSignature()  throws IOException, NoSuchAlgorithmException, InvalidKeySpecException,InvalidKeyException,SignatureException{
 		byte[] data = "Register Operation".getBytes(); // Replace
 		// generating a signature
-		Signature rsaForSign = Signature.getInstance("SHA1withRSA");
+		Signature rsaForSign = Signature.getInstance("SHA256withRSA");
 		rsaForSign.initSign(getPrivateKey());
 		rsaForSign.update(data);
 		byte[] signature = rsaForSign.sign();
