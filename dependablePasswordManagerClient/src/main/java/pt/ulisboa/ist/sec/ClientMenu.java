@@ -95,11 +95,13 @@ public class ClientMenu {
 
 	public void registerUser() throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		if(getClient().getPublicKey()!= null) {
+			// Implementar vários logins mesmo user
 			System.out.println("User already registered");
 			return;
 		}
 		getClient().setPublicKey(); // Find key on file
-		String response = getClient().getStub().registerUser(getClient().getPublicKeyString(),getClient().getSignature());
+
+		String response = getClient().getStub().registerUser(getClient().getPublicKeyString(),DigitalSignature.getSignature(getClient().getPublicKey().getEncoded(),getClient().getPrivateKey()));
 		System.out.println("User registered successfuly!");
 		getClient().setSecretNumber(response);
 	}

@@ -86,7 +86,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			System.out.println("Error registering user. ");
 			return "Error: Could not register user.";
 		}
-		else if (verifySignature(key,signature)){
+		else if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			System.out.println("Verified Signature!");
 			String secretKey = generateSecretKey();
 			String nounce = String.valueOf(0);
@@ -96,24 +96,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			byte[] cipheredSecKey = cipherSk(secretKey,getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
 
+			//Tiago aplica aqui a DigitalSignature antes de enviar
+
 			return byteToString(cipheredSecKey) + "-" + publicKey;
 		}
 		return "Error: Could not validate signature.";
-	}
-
-	public boolean verifySignature(String pubKeyClient,String signature) throws NoSuchAlgorithmException, InvalidKeySpecException,InvalidKeyException,SignatureException{
-		// verifying a signature
-		byte[] data = "Register Operation".getBytes(); // Replace
-
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(stringToByte(pubKeyClient));
-		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-		Signature rsaForVerify = Signature.getInstance("SHA256withRSA");
-		rsaForVerify.initVerify(publicKey);
-		rsaForVerify.update(data);
-		boolean verifies = rsaForVerify.verify(stringToByte(signature));
-		return verifies;
 	}
 
 	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
@@ -152,6 +139,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				savePasswordHash(key,domain,username,pass);
 				getRegisteredUsers().get(key).setNounce(requestNonce);
 				byte[] response = cipher("Password Saved-" + requestNonce,getClientPublicKey(key));
+				//Tiago aplica aqui a DigitalSignature antes de enviar
 				return byteToString(response);
 			}
 
@@ -191,6 +179,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+		//Tiago aplica o DigitalSignature antes de enviar
+
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
 		String key = parts[0];

@@ -213,16 +213,6 @@ public class PassManagerClient{
 		return message;
 	}
 
-	public String getSignature()  throws IOException, NoSuchAlgorithmException, InvalidKeySpecException,InvalidKeyException,SignatureException{
-		byte[] data = "Register Operation".getBytes(); // Replace
-		// generating a signature
-		Signature rsaForSign = Signature.getInstance("SHA256withRSA");
-		rsaForSign.initSign(getPrivateKey());
-		rsaForSign.update(data);
-		byte[] signature = rsaForSign.sign();
-		return byteToString(signature);
-	}
-
 	public int getId() {
 		return id;
 	}
