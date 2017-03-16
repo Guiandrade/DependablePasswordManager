@@ -36,21 +36,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return DatatypeConverter.printBase64Binary(byt);
 	}
 
-	public byte[] cipher(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
-		return c_message;
-	}
-
-	public PublicKey getClientPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
-		byte[] pk = stringToByte(key);
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
-		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-		return publicKey;
-	}
-
 	public String startCommunication() throws RemoteException {
 		System.out.println("Connected to client with id : " + clientId);
 		clientId++;
@@ -74,7 +59,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				nounce = existingCombination.getNounce();
 			}
 
-			byte[] cipheredNounce = cipher(nounce,getClientPublicKey(key));
+			byte[] cipheredNounce = RSAMethods.cipher(nounce,RSAMethods.getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
 			String message = byteToString(cipheredNounce) + "-" + publicKey;
 			String sig = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
@@ -113,7 +98,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				System.out.println("Nonce confirmed");
 				savePasswordHash(key,domain,username,pass);
 				getRegisteredUsers().get(key).setNounce(requestNonce);
-				byte[] response = cipher("Password Saved",getClientPublicKey(key));
+				byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 				String responseStr = byteToString(response);
 				String responseMsg = responseStr + "-" + requestNonce;
 				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
@@ -122,7 +107,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			else {
 				System.out.println("Nonce incorrect");
-				byte[] response = cipher("Error",getClientPublicKey(key));
+				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				String responseStr = byteToString(response);
 				String responseMsg = responseStr + "-" + clientNonce;
 				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
@@ -132,7 +117,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 		else {
 			System.out.println("Signature not verified");
-			byte[] response = cipher("Error",getClientPublicKey(key));
+			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 			String responseStr = byteToString(response);
 			String responseMsg = responseStr + "-" + clientNonce;
 			String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
@@ -196,14 +181,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 						return messageToSend + "-" + sig;
 					}
 					else {
-						byte[] response = cipher("Entry doesnt exist!",getClientPublicKey(key));
+						byte[] response = RSAMethods.cipher("Entry doesnt exist!",RSAMethods.getClientPublicKey(key));
 						String messageToSend = byteToString(response) + "-"+requestNonce;
 						String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
 						return messageToSend + "-" + sig;
 					}
 				}
 				else {
-					byte[] response = cipher("Error",getClientPublicKey(key));
+					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 					String messageToSend = byteToString(response) + "-"+clientNonce;
 					String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
 					return messageToSend + "-" + sig;
@@ -212,7 +197,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			else {
 				System.out.println("Nonce incorrect");
-				byte[] response = cipher("Error",getClientPublicKey(key));
+				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				String messageToSend = byteToString(response) + "-"+clientNonce;
 				String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
 				return messageToSend + "-" + sig;
@@ -221,7 +206,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 		else {
 			System.out.println("Signature not verified");
-			byte[] response = cipher("Error",getClientPublicKey(key));
+			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 			String messageToSend = byteToString(response) + "-"+clientNonce;
 			String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
 			return messageToSend + "-" + sig;

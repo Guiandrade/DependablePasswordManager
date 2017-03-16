@@ -71,35 +71,6 @@ public class PassManagerClient{
 		return DatatypeConverter.printBase64Binary(byt);
 	}
 
-	public String mac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
-		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
-		authenticator.init(sk);
-		byte[] msg = message.getBytes("UTF-8");
-		byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
-		return byteToString(clientMsgAuthenticator);
-	}
-
-	public byte[] cipherPubKCP(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
-		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
-		return c_message;
-	}
-
-	public byte[] cipherPubKCNP(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
-		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
-		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
-		return c_message;
-	}
-
-	public byte[] decipher(String c_message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.DECRYPT_MODE, getPrivateKey());
-		byte[] message = cipher.doFinal(stringToByte(c_message));
-		return message;
-	}
-
 	public void setPublicKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		// Read Public Key.
 		File filePublicKey = new File(publicKeyPath + id +".key");
@@ -139,7 +110,7 @@ public class PassManagerClient{
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(nonce+1 == Integer.parseInt(responseNonce)) {
 				nonce = nonce + 1;
-				byte[] passwordByte = decipher(responseMessage);
+				byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 				String password = new String(passwordByte, "UTF-8");
 				return "Your password is : "+password;
 			}
@@ -158,7 +129,7 @@ public class PassManagerClient{
 		String responseMessage = parts[0];
 		String responseNonce = parts[1];
 		String responseSignature = parts[2];
-		byte[] responseByte = decipher(responseMessage);
+		byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 		String responseString = new String(responseByte,"UTF-8");
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(responseString.equals("Error") || responseString.equals("Password Saved")) {
@@ -182,15 +153,15 @@ public class PassManagerClient{
 	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
-		byte[] c_domain = cipherPubKCNP(domain);
-		byte[] c_username = cipherPubKCNP(username);
+		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, getPublicKey());
+		byte[] c_username = RSAMethods.cipherPubKeyCliNoPadding(username, getPublicKey());
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);
 		String message = "";
 
 		if(!(pass.equals(""))) {
-			byte[] c_password = cipherPubKCP(pass);
+			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
 			String send_password = byteToString(c_password);
 			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
 		}
@@ -219,7 +190,7 @@ public class PassManagerClient{
 		String sig = parts[2];
 		serverKey = getServerPublicKey(serverPubKey);
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(sig), stringToByte(msg))) {
-			byte [] keyByte = decipher(cipheredNounce);
+			byte [] keyByte = RSAMethods.decipher(cipheredNounce,getPrivateKey());
 			System.out.println("keyByte -> "+keyByte);
 			String nonceStr = new String(keyByte,"UTF-8");
 			System.out.println("nonce -> "+nonceStr);
