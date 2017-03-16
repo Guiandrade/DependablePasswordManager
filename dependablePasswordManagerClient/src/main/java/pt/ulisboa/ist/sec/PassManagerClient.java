@@ -220,9 +220,7 @@ public class PassManagerClient{
 		serverKey = getServerPublicKey(serverPubKey);
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(sig), stringToByte(msg))) {
 			byte [] keyByte = decipher(cipheredNounce);
-			System.out.println("keyByte -> "+keyByte);
 			String nonceStr = new String(keyByte,"UTF-8");
-			System.out.println("nonce -> "+nonceStr);
 			nonce = Integer.parseInt(nonceStr);
 			System.out.println("User Registered Successfuly!");
 		}

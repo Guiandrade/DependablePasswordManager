@@ -18,7 +18,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	private int clientId=1;
 	private int certificateNum=0;
-	private HashMap<String,Combination> registeredUsers = new HashMap<String,Combination>();
+	private HashMap<String,String> registeredUsers = new HashMap<String,String>();
 	private HashMap<String,HashMap<Combination,String>> tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
@@ -58,7 +58,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException  {
-		// Add Key to Keystore to Register User
+		// Registers or Logs User s
 		String secretKey;
 		String nounce;
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
@@ -66,12 +66,10 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			if(!getRegisteredUsers().containsKey(key)){
 				secretKey = generateSecretKey();
 				nounce = String.valueOf(0);
-				Combination combination = new Combination(secretKey,nounce);
-				getRegisteredUsers().put(key,combination);
+				getRegisteredUsers().put(key,nounce);
 			}
 			else{
-				Combination existingCombination = getRegisteredUsers().get(key);
-				nounce = existingCombination.getNounce();
+				nounce = getRegisteredUsers().get(key);
 			}
 
 			byte[] cipheredNounce = cipher(nounce,getClientPublicKey(key));
@@ -97,22 +95,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String username = parts[3];
 		String pass = parts[4];
 		String signature = parts[5];
-		String clientNonce = getRegisteredUsers().get(key).getNounce();
+		String clientNonce = getRegisteredUsers().get(key);
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
-
-		System.out.println("\nKey: " + key);
-		System.out.println("Nonce: "+nonce);
-		System.out.println("Domain: "+domain);
-		System.out.println("Username: "+username);
-		System.out.println("Password: "+pass);
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 			System.out.println("Verified Signature!");
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 				System.out.println("Nonce confirmed");
-				savePasswordHash(key,domain,username,pass);
-				getRegisteredUsers().get(key).setNounce(requestNonce);
+				savePasswordMap(key,domain,username,pass);
+				getRegisteredUsers().put(key,requestNonce);
 				byte[] response = cipher("Password Saved",getClientPublicKey(key));
 				String responseStr = byteToString(response);
 				String responseMsg = responseStr + "-" + requestNonce;
@@ -140,16 +132,20 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 	}
 
-	public String savePasswordHash(String key, String domain, String username, String password) throws RemoteException {
+	public String savePasswordMap(String key, String domain, String username, String password) throws RemoteException {
 		if (getRegisteredUsers().containsKey(key) && key!= null) {
 			HashMap<Combination, String> domainsMap;
+			Combination combination = new Combination (domain,username);
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
+				if (updatePassword(combination, domainsMap, password)){
+					return "Combination successfully saved on server!";
+				}
 			}
 			else{
 				domainsMap = new HashMap<Combination,String>();
 			}
-			Combination combination = new Combination (domain,username);
+
 			domainsMap.put(combination,password);
 			tripletMap.put(key,domainsMap);
 
@@ -170,14 +166,9 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String domain = parts[2];
 		String username = parts[3];
 		String signature = parts[4];
-		String clientNonce = getRegisteredUsers().get(key).getNounce();
+		String clientNonce = getRegisteredUsers().get(key);
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
-		String secNum = getRegisteredUsers().get(key).getDomain();
-
-		System.out.println("\nKey: " + key);
-		System.out.println("Nonce: "+nonce);
-		System.out.println("Domain: "+domain);
-		System.out.println("Username: "+username);
+		String messageToSend;
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 			System.out.println("Verified Signature!");
@@ -186,46 +177,38 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				System.out.println("Nonce confirmed");
 
 				if (getRegisteredUsers().containsKey(key) && key!= null) {
-					getRegisteredUsers().get(key).setNounce(requestNonce);
+					getRegisteredUsers().put(key,requestNonce);
 					Combination combination = new Combination (domain,username);
 					HashMap<Combination,String> userMap = tripletMap.get(key);
 					String result = checkCombination(combination,userMap);
 					if ( result != null) {
-						String messageToSend = result + "-" + requestNonce;
-						String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-						return messageToSend + "-" + sig;
+						messageToSend = result + "-" + requestNonce;
 					}
 					else {
 						byte[] response = cipher("Entry doesnt exist!",getClientPublicKey(key));
-						String messageToSend = byteToString(response) + "-"+requestNonce;
-						String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-						return messageToSend + "-" + sig;
+						messageToSend = byteToString(response) + "-"+requestNonce;
 					}
 				}
 				else {
 					byte[] response = cipher("Error",getClientPublicKey(key));
-					String messageToSend = byteToString(response) + "-"+clientNonce;
-					String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-					return messageToSend + "-" + sig;
+					messageToSend = byteToString(response) + "-"+clientNonce;
 				}
 			}
 
 			else {
 				System.out.println("Nonce incorrect");
-				byte[] response = cipher("Error",getClientPublicKey(key));
-				String messageToSend = byteToString(response) + "-"+clientNonce;
-				String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-				return messageToSend + "-" + sig;
+				byte[] response = cipher("Error : Please Log In Again!",getClientPublicKey(key));
+				messageToSend = byteToString(response) + "-"+clientNonce;
 			}
 
 		}
 		else {
 			System.out.println("Signature not verified");
 			byte[] response = cipher("Error",getClientPublicKey(key));
-			String messageToSend = byteToString(response) + "-"+clientNonce;
-			String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-			return messageToSend + "-" + sig;
+			messageToSend = byteToString(response) + "-"+clientNonce;
 		}
+		String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+		return messageToSend + "-" + sig;
 	}
 
 	public void close() throws RemoteException {
@@ -233,7 +216,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	}
 
-	public HashMap<String,Combination> getRegisteredUsers() {
+	public HashMap<String,String> getRegisteredUsers() {
 		return registeredUsers;
 	}
 
@@ -244,6 +227,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			}
 		}
 		return null;
+	}
+
+	public boolean updatePassword(Combination c,HashMap<Combination,String> userMap,String pass){
+		for(Combination combinationSaved : userMap.keySet()){
+			if (c.equalsTo(combinationSaved)){
+				userMap.put(combinationSaved,pass);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public String generateSecretKey() throws NoSuchAlgorithmException{
