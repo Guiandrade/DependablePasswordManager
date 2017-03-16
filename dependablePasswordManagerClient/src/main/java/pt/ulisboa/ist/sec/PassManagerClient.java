@@ -130,14 +130,6 @@ public class PassManagerClient{
 		return privateKey;
 	}
 
-	public byte[] convertMsgToMac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
-		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
-		authenticator.init(sk);
-		byte[] msg = message.getBytes("UTF-8");
-		byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
-		return clientMsgAuthenticator;
-	}
-
 	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1];

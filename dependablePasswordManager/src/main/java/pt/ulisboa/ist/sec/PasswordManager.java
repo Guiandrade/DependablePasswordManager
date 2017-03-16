@@ -36,14 +36,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return DatatypeConverter.printBase64Binary(byt);
 	}
 
-	public byte[] convertMsgToMac(String message, SecretKey sk) throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
-		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
-		authenticator.init(sk);
-		byte[] msg = message.getBytes("UTF-8");
-		byte[] clientMsgAuthenticator = authenticator.doFinal(msg);
-		return clientMsgAuthenticator;
-	}
-
 	public byte[] cipher(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
