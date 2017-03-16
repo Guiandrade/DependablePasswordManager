@@ -81,25 +81,32 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public String registerUser(String key,String signature) throws SignatureException,RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
 		// Add Key to Keystore to Register User
-		if (getRegisteredUsers().containsKey(key)) {
-			System.out.println("Error registering user. ");
-			return "Error: Could not register user.";
-		}
-		else if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
+		String secretKey;
+		String nounce;
+		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			System.out.println("Verified Signature!");
-			String secretKey = generateSecretKey();
-			String nounce = String.valueOf(0);
-			Combination combination = new Combination(secretKey,nounce);
-			getRegisteredUsers().put(key,combination);
+			if(!getRegisteredUsers().containsKey(key)){
+				secretKey = generateSecretKey();
+				nounce = String.valueOf(0);
+				Combination combination = new Combination(secretKey,nounce);
+				getRegisteredUsers().put(key,combination);
+			}
+			else{
+				Combination existingCombination = getRegisteredUsers().get(key);
+				nounce = existingCombination.getNounce();
+			}
 
-			byte[] cipheredSecKey = cipherSk(secretKey,getClientPublicKey(key));
+			byte[] cipheredNounce = cipher(nounce,getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
 
 			//Tiago aplica aqui a DigitalSignature antes de enviar
 
-			return byteToString(cipheredSecKey) + "-" + publicKey;
+			return byteToString(cipheredNounce) + "-" + publicKey;
 		}
-		return "Error: Could not validate signature.";
+		else{
+			return "Error: Could not validate signature.";
+		}
+
 	}
 
 	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {

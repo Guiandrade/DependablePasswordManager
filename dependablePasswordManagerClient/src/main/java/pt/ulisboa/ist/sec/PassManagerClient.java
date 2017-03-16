@@ -86,7 +86,7 @@ public class PassManagerClient{
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
 	}
-	
+
 	public byte[] cipherPubKCNP(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
 		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey());
@@ -164,7 +164,7 @@ public class PassManagerClient{
 				nonce = nonce + 1;
 				byte[] passwordByte = decipher(responseMessage);
 				String password = new String(passwordByte, "UTF-8");
-				return password;
+				return "Your password is : "+password;
 			}
 			else {
 				return "Error";
@@ -234,16 +234,18 @@ public class PassManagerClient{
 		this.id = id;
 	}
 
-	public void setSecretNumber(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
-		nonce = 0;
+	public void processRegisterResponse(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 		String[] parts = response.split("-");
-		String cipheredSecKey = parts[0];
+		String cipheredNounce = parts[0];
 		String serverPubKey = parts[1];
 		serverKey = getServerPublicKey(serverPubKey);
-		byte [] keyByte = decipherSk(cipheredSecKey);
-		SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
-		secKey = originalKey;
+		byte [] keyByte = decipher(cipheredNounce);
+		System.out.println("keyByte -> "+keyByte);
+		String nonceStr = new String(keyByte,"UTF-8");
+		System.out.println("nonce -> "+nonceStr);
+		nonce = Integer.parseInt(nonceStr);
 	}
+
 
 	public SecretKey getSecretNumber() {
 		return secKey;
