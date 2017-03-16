@@ -102,7 +102,6 @@ public class ClientMenu {
 		getClient().setPublicKey(); // Find key on file
 
 		String response = getClient().getStub().registerUser(getClient().getPublicKeyString(),DigitalSignature.getSignature(getClient().getPublicKey().getEncoded(),getClient().getPrivateKey()));
-		System.out.println("User registered successfuly!");
 		getClient().processRegisterResponse(response);
 	}
 

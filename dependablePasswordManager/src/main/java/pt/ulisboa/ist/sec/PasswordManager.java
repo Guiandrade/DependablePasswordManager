@@ -44,25 +44,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return clientMsgAuthenticator;
 	}
 
-	public byte[] cipherSk(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-		byte[] c_message = cipher.doFinal(stringToByte(message));
-		return c_message;
-	}
-
 	public byte[] cipher(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
 		return c_message;
-	}
-
-	public byte[] decipher(String c_message, PrivateKey privateKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.DECRYPT_MODE, privateKey);
-		byte[] message = cipher.doFinal(stringToByte(c_message));
-		return message;
 	}
 
 	public PublicKey getClientPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
@@ -79,7 +65,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return "Connected with server!";
 	}
 
-	public String registerUser(String key,String signature) throws SignatureException,RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
+	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException  {
 		// Add Key to Keystore to Register User
 		String secretKey;
 		String nounce;
@@ -98,10 +84,10 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			byte[] cipheredNounce = cipher(nounce,getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
+			String message = byteToString(cipheredNounce) + "-" + publicKey;
+			String sig = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
 
-			//Tiago aplica aqui a DigitalSignature antes de enviar
-
-			return byteToString(cipheredNounce) + "-" + publicKey;
+			return message + "-" + sig;
 		}
 		else{
 			return "Error: Could not validate signature.";
@@ -127,10 +113,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		System.out.println("Domain: "+domain);
 		System.out.println("Username: "+username);
 		System.out.println("Password: "+pass);
-
-
-		//byte [] keyByte = stringToByte(secNum);
-		//SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 			System.out.println("Verified Signature!");
@@ -188,7 +170,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
-		//Tiago aplica o DigitalSignature antes de enviar
 
 		String[] parts = message.split("-");
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
@@ -205,10 +186,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		System.out.println("Nonce: "+nonce);
 		System.out.println("Domain: "+domain);
 		System.out.println("Username: "+username);
-
-
-		//byte [] keyByte = stringToByte(secNum);
-		//SecretKey originalKey = new SecretKeySpec(keyByte, 0, keyByte.length, "HmacMD5");
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 			System.out.println("Verified Signature!");

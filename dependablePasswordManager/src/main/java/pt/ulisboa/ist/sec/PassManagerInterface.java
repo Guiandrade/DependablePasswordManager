@@ -19,7 +19,7 @@ import java.security.NoSuchAlgorithmException;
 public interface PassManagerInterface extends Remote{
 
 	public String startCommunication() throws RemoteException;
-	public String registerUser(String key,String signature) throws SignatureException,RemoteException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException;;
+	public String registerUser(String key,String signature) throws SignatureException,RemoteException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException, IOException;;
 	public String savePassword(String message) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException;
 	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException;
 	public void close() throws RemoteException;

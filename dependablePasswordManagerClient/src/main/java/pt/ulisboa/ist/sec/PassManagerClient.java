@@ -20,7 +20,6 @@ public class PassManagerClient{
 
 	private PassManagerInterface passManagerInt;
 	private PublicKey pubKey;
-	private SecretKey secKey;
 	private PublicKey serverKey;
 	private int nonce;
 	private int id;
@@ -94,21 +93,7 @@ public class PassManagerClient{
 		return c_message;
 	}
 
-	public byte[] cipherSPubK(String message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, getServerPublicKey());
-		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
-		return c_message;
-	}
-
 	public byte[] decipher(String c_message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.DECRYPT_MODE, getPrivateKey());
-		byte[] message = cipher.doFinal(stringToByte(c_message));
-		return message;
-	}
-
-	public byte[] decipherSk(String c_message) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 		cipher.init(Cipher.DECRYPT_MODE, getPrivateKey());
 		byte[] message = cipher.doFinal(stringToByte(c_message));
@@ -234,20 +219,23 @@ public class PassManagerClient{
 		this.id = id;
 	}
 
-	public void processRegisterResponse(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+	public void processRegisterResponse(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException {
 		String[] parts = response.split("-");
+		String msg = parts[0] + "-" + parts[1];
 		String cipheredNounce = parts[0];
 		String serverPubKey = parts[1];
+		String sig = parts[2];
 		serverKey = getServerPublicKey(serverPubKey);
-		byte [] keyByte = decipher(cipheredNounce);
-		System.out.println("keyByte -> "+keyByte);
-		String nonceStr = new String(keyByte,"UTF-8");
-		System.out.println("nonce -> "+nonceStr);
-		nonce = Integer.parseInt(nonceStr);
-	}
-
-
-	public SecretKey getSecretNumber() {
-		return secKey;
+		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(sig), stringToByte(msg))) {
+			byte [] keyByte = decipher(cipheredNounce);
+			System.out.println("keyByte -> "+keyByte);
+			String nonceStr = new String(keyByte,"UTF-8");
+			System.out.println("nonce -> "+nonceStr);
+			nonce = Integer.parseInt(nonceStr);
+			System.out.println("User Registered Successfuly!");
+		}
+		else {
+			System.out.println("Error Registering User");
+		}
 	}
 }
