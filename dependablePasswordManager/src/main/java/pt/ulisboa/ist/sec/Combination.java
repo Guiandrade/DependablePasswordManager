@@ -15,20 +15,8 @@ public class Combination {
 		return attribute1;
 	}
 
-	public String getSecretNum() {
-		return attribute1;
-	}
-
 	public String  getUsername() {
 		return attribute2;
-	}
-
-	public String  getNounce() {
-		return attribute2;
-	}
-	
-	public void setNounce(String nounce) {
-		attribute2 = nounce;
 	}
 
 	public boolean equalsTo(Combination c){

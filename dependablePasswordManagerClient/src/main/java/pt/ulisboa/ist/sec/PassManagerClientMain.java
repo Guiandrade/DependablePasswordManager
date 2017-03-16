@@ -19,7 +19,7 @@ public class PassManagerClientMain
 		int selection = input.nextInt();
 		input.nextLine();
 		PassManagerClient client = new PassManagerClient(selection);
-		client.setup();
+		client.init();
 		ClientMenu menu = new ClientMenu(client);
 		while(true){
 			menu.display();

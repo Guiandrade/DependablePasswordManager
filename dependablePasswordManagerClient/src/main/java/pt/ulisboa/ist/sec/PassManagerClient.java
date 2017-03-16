@@ -21,7 +21,7 @@ public class PassManagerClient{
 	private PassManagerInterface passManagerInt;
 	private PublicKey pubKey;
 	private PublicKey serverKey;
-	private int nonce;
+	private int seqNum;
 	private int id;
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
@@ -38,7 +38,7 @@ public class PassManagerClient{
 		return publicKey;
 	}
 
-	public void setup(){
+	public void init(){
 		try{
 			passManagerInt = (PassManagerInterface) Naming.lookup("//localhost:8081/PasswordManager");
 			String response = passManagerInt.startCommunication();
@@ -105,11 +105,11 @@ public class PassManagerClient{
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1];
 		String responseMessage = parts[0];
-		String responseNonce = parts[1];
+		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
-			if(nonce+1 == Integer.parseInt(responseNonce)) {
-				nonce = nonce + 1;
+			if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
+				seqNum = seqNum + 1;
 				byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 				String password = new String(passwordByte, "UTF-8");
 				return "Your password is : "+password;
@@ -127,14 +127,14 @@ public class PassManagerClient{
 		String[] parts = response.split("-");
 		String msg = parts[0] + parts[1];
 		String responseMessage = parts[0];
-		String responseNonce = parts[1];
+		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 		String responseString = new String(responseByte,"UTF-8");
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(responseString.equals("Error") || responseString.equals("Password Saved")) {
-				if(nonce+1 == Integer.parseInt(responseNonce)) {
-					nonce = nonce + 1;
+				if(seqNum+1 == Integer.parseInt(responseSeqNum)) {
+					seqNum = seqNum + 1;
 					return responseString;
 				}
 				else {
@@ -163,10 +163,10 @@ public class PassManagerClient{
 		if(!(pass.equals(""))) {
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
 			String send_password = byteToString(c_password);
-			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
+			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
 		}
 		else {
-			message = publicKey + "-" + String.valueOf(nonce+1) + "-" + send_domain + "-" + send_username;
+			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + send_domain + "-" + send_username;
 		}
 
 		String signature = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
@@ -192,9 +192,15 @@ public class PassManagerClient{
 		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(sig), stringToByte(msg))) {
 
 			byte [] keyByte = RSAMethods.decipher(cipheredNounce,getPrivateKey());
-			String nonceStr = new String(keyByte,"UTF-8");
-			nonce = Integer.parseInt(nonceStr);
-			System.out.println("User Registered Successfuly!");
+			String seqNumStr = new String(keyByte,"UTF-8");
+			seqNum = Integer.parseInt(seqNumStr);
+			if (seqNum == 0){
+					System.out.println("User Registered Successfuly!");
+			}
+			else{
+					System.out.println("User Logged In Successfuly!");
+			}
+
 		}
 		else {
 			System.out.println("Error Registering User");

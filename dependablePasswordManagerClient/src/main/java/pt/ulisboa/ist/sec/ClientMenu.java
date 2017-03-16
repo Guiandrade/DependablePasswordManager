@@ -26,7 +26,7 @@ public class ClientMenu {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
 				"Select an option: \n" +
-						"  1) Register User\n" +
+						"  1) Register/Login\n" +
 						"  2) Save Password\n" +
 						"  3) Retrieve Password\n" +
 						"  4) Exit\n " +

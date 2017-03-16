@@ -45,21 +45,21 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException  {
 		// Registers or Logs User s
 		String secretKey;
-		String nounce;
+		String seqNum;
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			System.out.println("Verified Signature!");
 			if(!getRegisteredUsers().containsKey(key)){
 				secretKey = generateSecretKey();
-				nounce = String.valueOf(0);
-				getRegisteredUsers().put(key,nounce);
+				seqNum = String.valueOf(0);
+				getRegisteredUsers().put(key,seqNum);
 			}
 			else{
-				nounce = getRegisteredUsers().get(key);
+				seqNum = getRegisteredUsers().get(key);
 			}
 
-			byte[] cipheredNounce = RSAMethods.cipher(nounce,RSAMethods.getClientPublicKey(key));
+			byte[] cipheredSeqNum = RSAMethods.cipher(seqNum,RSAMethods.getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
-			String message = byteToString(cipheredNounce) + "-" + publicKey;
+			String message = byteToString(cipheredSeqNum) + "-" + publicKey;
 			String sig = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
 
 			return message + "-" + sig;
