@@ -6,7 +6,7 @@ public class Combination {
 	private String attribute2;
 
 	public Combination(String x, String  y) {
-		// x is domain or secretNum and y is username or nounce
+		// x is domain and y is username
 		attribute1 = x;
 		attribute2 = y;
 	}
