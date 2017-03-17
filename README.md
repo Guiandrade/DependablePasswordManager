@@ -10,3 +10,17 @@ rmiregistry &
 
 (For Windows)
 start rmiregistry 
+
+To Run:
+
+1) Go to the keyStore folder on the terminal and run the following commands:
+      - mvn compile
+      - mvn exec:java
+      (On the number of keys wanted please input at least 1)
+2) Go to the dependablePasswordManagerServer folder on the terminal and run the following commands:
+      - mvn compile
+      - mvn exec:java
+3) Go to the dependablePasswordManagerClient folder on the terminal and run the following commands:
+      - mvn compile
+      - mvn exec:java
+      
