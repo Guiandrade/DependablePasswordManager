@@ -29,6 +29,20 @@ public class RSAMethods{
 	public static String byteToString(byte[] byt) {
 		return DatatypeConverter.printBase64Binary(byt);
 	}
+	
+	public static byte[] cipherPubKeyCliPadding(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
+		return c_message;
+	}
+
+	public static byte[] cipherPubKeyCliNoPadding(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
+		cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+		byte[] c_message = cipher.doFinal(message.getBytes("UTF-8"));
+		return c_message;
+	}
 
 	public static byte[] cipher(String message, PublicKey publicKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
 		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -43,5 +57,12 @@ public class RSAMethods{
 		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
 		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 		return publicKey;
+	}
+	
+	public static byte[] decipher(String c_message, PrivateKey privateKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.DECRYPT_MODE, privateKey);
+		byte[] message = cipher.doFinal(stringToByte(c_message));
+		return message;
 	}
 }
