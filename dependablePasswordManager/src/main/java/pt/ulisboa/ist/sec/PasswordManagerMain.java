@@ -22,6 +22,7 @@ public class PasswordManagerMain
 						while(input!=0){
 								input = in.nextInt();
 						}
+            passManager.close();
         }catch(Exception e) {
             System.out.println("Server main :" + e.getMessage());
         }

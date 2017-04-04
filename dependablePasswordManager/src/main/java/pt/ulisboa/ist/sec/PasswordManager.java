@@ -9,6 +9,7 @@ import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.logging.*;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
@@ -23,9 +24,33 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private PublicKey pubKey;
+	private final Logger logger = Logger.getLogger("MyLog");  
+    private FileHandler fh = null;
 
 	public PasswordManager () throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
+		createLog();
+		
+	}
+
+	public void createLog() throws SecurityException,IOException {
+
+		try {  
+
+        // This block configure the logger with handler and formatter  
+        fh = new FileHandler("./log/LogFile.log",true);  // true allows appending to existing file
+        logger.addHandler(fh);
+        SimpleFormatter formatter = new SimpleFormatter();  
+        fh.setFormatter(formatter);  
+
+        // the following statement is used to log any messages  
+        logger.info("Server using log file!\n");  
+
+    	} catch (SecurityException e) {  
+        	e.printStackTrace();  
+    	} catch (IOException e) {  
+        	e.printStackTrace();  
+    	}  
 	}
 
 	public byte[] stringToByte(String str) {
@@ -37,7 +62,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String startCommunication() throws RemoteException {
-		System.out.println("Connected to client with id : " + clientId);
+		// TO DO KEY/Ip,port PAIR to allow multiple devices
+		logger.info("Connected to client with pair key/ip,port : " + "TO DO\n");
 		clientId++;
 		return "Connected with server!";
 	}
@@ -47,14 +73,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String secretKey;
 		String seqNum;
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
-			System.out.println("Verified Signature!");
+			logger.info("Verified Digital Signature!\n");
 			if(!getRegisteredUsers().containsKey(key)){
 				secretKey = generateSecretKey();
 				seqNum = String.valueOf(0);
 				getRegisteredUsers().put(key,seqNum);
+				logger.info("Successful registration of user with key "+key+"\n");
 			}
 			else{
 				seqNum = getRegisteredUsers().get(key);
+				logger.info("Successful login of user with key "+key+"\n");
 			}
 
 			byte[] cipheredSeqNum = RSAMethods.cipher(seqNum,RSAMethods.getClientPublicKey(key));
@@ -65,6 +93,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			return message + "-" + sig;
 		}
 		else{
+			logger.info("Error: Could not validate signature from user with key "+key+"\n"); 
 			return "Error: Could not validate signature.";
 		}
 
@@ -84,10 +113,10 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
-			System.out.println("Verified Signature!");
+			logger.info("Verified Digital Signature!\n");
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
-				System.out.println("Nonce confirmed");
+				logger.info("Nonce confirmed!\n");
 				savePasswordMap(key,domain,username,pass);
 				getRegisteredUsers().put(key,requestNonce);
 				byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
@@ -98,7 +127,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			}
 
 			else {
-				System.out.println("Nonce incorrect");
+				logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				String responseStr = byteToString(response);
 				String responseMsg = responseStr + "-" + clientNonce;
@@ -108,7 +137,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 		}
 		else {
-			System.out.println("Signature not verified");
+			logger.info("Error: Digital Signature not verified from savePassword request of user with key "+key+"\n");
 			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 			String responseStr = byteToString(response);
 			String responseMsg = responseStr + "-" + clientNonce;
@@ -124,6 +153,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
 				if (updatePassword(combination, domainsMap, password)){
+					logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully updated on server!\n");
 					return "Combination successfully saved on server!";
 				}
 			}
@@ -134,9 +164,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			domainsMap.put(combination,password);
 			tripletMap.put(key,domainsMap);
 
+			logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully saved on server!\n");
 			return "Combination successfully saved on server!";
 		}
 		else{
+			logger.info("Error: Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" can't be saved on server due to illegal arguments!\n");
 			return "Error: Illegal Arguments."; // Maybe put custom Exception here
 		}
 
@@ -156,10 +188,10 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String messageToSend;
 
 		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
-			System.out.println("Verified Signature!");
+			logger.info("Verified Digital Signature!\n");
 
 			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
-				System.out.println("Nonce confirmed");
+				logger.info("Nonce confirmed!\n");
 
 				if (getRegisteredUsers().containsKey(key) && key!= null) {
 					getRegisteredUsers().put(key,requestNonce);
@@ -168,27 +200,30 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					String result = checkCombination(combination,userMap);
 					if ( result != null) {
 						messageToSend = result + "-" + requestNonce;
+						logger.info("Request of password for user with key "+key+" and domain "+domain+" and username "+ username+" was successful.\n");
 					}
 					else {
-						byte[] response = RSAMethods.cipher("Entry doesnt exist!",RSAMethods.getClientPublicKey(key));
+						logger.info("Error: request of user with key "+key+" and domain "+domain+" and username "+ username+", entry does not exist.\n");
+						byte[] response = RSAMethods.cipher("Entry does not exist!",RSAMethods.getClientPublicKey(key));
 						messageToSend = byteToString(response) + "-"+requestNonce;
 					}
 				}
 				else {
+					logger.info("Error: request of user with key "+key+", key does not exist.\n");
 					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 					messageToSend = byteToString(response) + "-"+clientNonce;
 				}
 			}
 
 			else {
-				System.out.println("Nonce incorrect");
+				logger.info("Error: Nonce incorrect.\n");
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				messageToSend = byteToString(response) + "-"+clientNonce;
 			}
 
 		}
 		else {
-			System.out.println("Signature not verified");
+			logger.info("Error: Digital Signature not verified.\n");
 
 			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 			messageToSend = byteToString(response) + "-"+clientNonce;
@@ -199,8 +234,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public void close() throws RemoteException {
-		// TODO Auto-generated method stub
-
+		for(Handler h:logger.getHandlers())
+		{
+    		h.close();   //must call h.close or a .LCK file will remain.
+		}
+			logger.info("Server successfully closed.\n");
 	}
 
 	public HashMap<String,String> getRegisteredUsers() {
