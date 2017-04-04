@@ -9,13 +9,14 @@ import javax.crypto.NoSuchPaddingException;
 
 import java.io.IOException;
 import java.security.*;
+import java.security.cert.CertificateException;
 import java.security.spec.*;
 
 public class PassManagerClientMain
 {
 	private static Scanner input = new Scanner(System.in);
 
-	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
+	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, UnrecoverableKeyException, CertificateException, KeyStoreException {
 		
 		System.out.println("Please insert client id: ");
 		int selection = input.nextInt();

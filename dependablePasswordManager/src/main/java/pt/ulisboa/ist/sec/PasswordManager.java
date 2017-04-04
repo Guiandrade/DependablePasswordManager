@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.*;
+import java.security.cert.CertificateException;
 import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +27,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private PublicKey pubKey;
 	private final Logger logger = Logger.getLogger("MyLog");  
     private FileHandler fh = null;
+    private static char[] ksPass = "sec".toCharArray();
+    private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
 
 	public PasswordManager () throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
@@ -68,7 +71,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return "Connected with server!";
 	}
 
-	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException  {
+	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, UnrecoverableKeyException, KeyStoreException, CertificateException  {
 		// Registers or Logs User s
 		String secretKey;
 		String seqNum;
@@ -305,9 +308,9 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		pubKey = publicKey;
 	}
 
-	public PrivateKey getPrivateKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+	public PrivateKey getPrivateKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		// Read Private Key.
-		File filePrivateKey = new File(privateKeyPath + certificateNum+ ".key");
+		/*File filePrivateKey = new File(privateKeyPath + certificateNum+ ".key");
 		FileInputStream fis = new FileInputStream(privateKeyPath + certificateNum+ ".key");
 		byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
 		fis.read(encodedPrivateKey);
@@ -315,7 +318,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 		PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
-		PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+		PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);*/
+		
+		FileInputStream fis = new FileInputStream(keyStorePath);
+
+		KeyStore ks = KeyStore.getInstance("JCEKS");
+
+		ks.load(fis,ksPass);
+		fis.close();
+
+		PrivateKey privateKey = (PrivateKey) ks.getKey(Integer.toString(0), ksPass);
 
 		return privateKey;
 	}

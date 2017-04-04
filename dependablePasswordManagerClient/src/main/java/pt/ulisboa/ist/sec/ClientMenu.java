@@ -4,7 +4,6 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.security.*;
-import java.security.SignatureException;
 import java.security.spec.*;
 import java.util.Scanner;
 import javax.crypto.*;
@@ -61,7 +60,7 @@ public class ClientMenu {
 
 	}
 
-	public String retrievePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, SignatureException,KeyStoreException  {
+	public String retrievePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException  {
 		System.out.println("Please insert a domain : ");
 		String domain =  input.nextLine();
 
@@ -77,7 +76,7 @@ public class ClientMenu {
 
 	}
 
-	public void savePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException {
+	public void savePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		System.out.println("Please insert a domain : ");
 		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");

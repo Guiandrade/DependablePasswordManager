@@ -120,7 +120,7 @@ public class PassManagerClient{
 		return privateKey;
 	}
 
-	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException {
+	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1];
 		String responseMessage = parts[0];
@@ -142,7 +142,7 @@ public class PassManagerClient{
 		}
 	}
 
-	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException {
+	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + parts[1];
 		String responseMessage = parts[0];
@@ -169,7 +169,7 @@ public class PassManagerClient{
 		}
 	}
 
-	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException {
+	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, getPublicKey());
@@ -201,7 +201,7 @@ public class PassManagerClient{
 		this.id = id;
 	}
 
-	public void processRegisterResponse(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException {
+	public void processRegisterResponse(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1];
 		String cipheredNounce = parts[0];

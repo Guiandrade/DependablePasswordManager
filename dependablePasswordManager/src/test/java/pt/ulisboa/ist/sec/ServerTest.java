@@ -5,11 +5,14 @@ import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.BadPaddingException;
@@ -48,7 +51,7 @@ public class ServerTest {
 	// REGISTER USER TESTS
 	
 	@Test
-	public void registerUserTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void registerUserTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
@@ -58,7 +61,7 @@ public class ServerTest {
 	}
 	
 	@Test
-	public void registerUserFailingTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void registerUserFailingTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
@@ -70,7 +73,7 @@ public class ServerTest {
 	// SAVE PASSWORD TESTS
 	
 	@Test
-	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
@@ -92,7 +95,7 @@ public class ServerTest {
 	}
 	
 	@Test
-	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
@@ -114,7 +117,7 @@ public class ServerTest {
 	}
 	
 	@Test
-	public void savePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void savePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
@@ -139,7 +142,7 @@ public class ServerTest {
 	// RETRIEVE PASSWORD TESTS
 	
 	@Test
-	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
@@ -165,7 +168,7 @@ public class ServerTest {
 	}
 	
 	@Test
-	public void retrievePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void retrievePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
@@ -191,7 +194,7 @@ public class ServerTest {
 	}
 	
 	@Test
-	public void retrievePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public void retrievePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager();
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
