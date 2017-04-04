@@ -10,6 +10,8 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import sun.security.x509.*;
 import java.nio.charset.Charset;
+import javax.crypto.*;
+import java.security.cert.CertificateException;
 
 
 public class CertificateGenerator {
@@ -17,6 +19,9 @@ public class CertificateGenerator {
     private static String certificatePath = "security/certificates/certificate";
     private static String publicKeyPath = "security/publicKeys/publickey";
     private static String privateKeyPath = "security/privateKeys/privatekey";
+    private static String keyStorePath = "security/keyStore/keystore.jce";
+    private static KeyStore.PasswordProtection password = new KeyStore.PasswordProtection("sec".toCharArray());
+    private static KeyStore ks;
 
     public static X509Certificate[] generateCertificate(KeyPair pair) throws Exception {
         X509CertInfo info = new X509CertInfo();
@@ -42,9 +47,10 @@ public class CertificateGenerator {
         return new X509Certificate[]{cert};
       }
 
-  public static boolean saveToFile(X509Certificate[] cert,int id,int max){
+  public static boolean saveToFile(X509Certificate[] cert,int id,int max, KeyPair pair){
 
       try{
+        CertificateGenerator.saveKeyPair(cert,pair,id,max);
         byte[] buf = cert[0].getEncoded();
         File file = new File(certificatePath+id+".dat");
         file.createNewFile(); // if file already exists will do nothing
@@ -73,8 +79,6 @@ public class CertificateGenerator {
         keyGen.initialize(2048, random);
         KeyPair pair = keyGen.generateKeyPair();
 
-        saveKeyPair(pair,id,max);
-
         return pair;
       }
       catch (Exception e){
@@ -82,9 +86,14 @@ public class CertificateGenerator {
         return null;
       }
   }
-   public static void saveKeyPair(KeyPair keyPair, int id, int max) throws IOException {
+   public static void saveKeyPair(X509Certificate[] cert,KeyPair keyPair, int id, int max) throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException {
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
+
+        FileInputStream fis = new FileInputStream(keyStorePath);
+        ks = KeyStore.getInstance("JCEKS");
+        ks.load(fis,"sec".toCharArray());
+        fis.close();
 
         // Store Public Key.
         X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(publicKey.getEncoded());
@@ -92,6 +101,9 @@ public class CertificateGenerator {
         fos.write(x509EncodedKeySpec.getEncoded());
 
          // Store Private Key.
+         
+         /* SAVE PRIVATE KEYS ON FILE
+            
          PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(privateKey.getEncoded());
          FileOutputStream os = new FileOutputStream(privateKeyPath+id+".key");
          os.write(pkcs8EncodedKeySpec.getEncoded());
@@ -99,6 +111,14 @@ public class CertificateGenerator {
              fos.close();
              os.close();
          }
+         */
+
+         KeyStore.PrivateKeyEntry skEntry = new KeyStore.PrivateKeyEntry(privateKey,cert);
+         String alias = String.valueOf(id);
+
+
+         ks.setEntry(alias,skEntry,password);
+
    }
 
 }

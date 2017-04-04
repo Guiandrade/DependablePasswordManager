@@ -7,11 +7,9 @@ import java.security.*;
 import java.security.SignatureException;
 import java.security.spec.*;
 import java.util.Scanner;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.*;
 import javax.xml.bind.DatatypeConverter;
+import java.security.cert.CertificateException;
 
 public class ClientMenu {
 
@@ -22,7 +20,7 @@ public class ClientMenu {
 		this.setClient(client);
 	}
 
-	public void display() throws SignatureException,RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
+	public void display() throws SignatureException,RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
 				"Select an option: \n" +
@@ -63,7 +61,7 @@ public class ClientMenu {
 
 	}
 
-	public String retrievePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, SignatureException {
+	public String retrievePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, SignatureException,KeyStoreException  {
 		System.out.println("Please insert a domain : ");
 		String domain =  input.nextLine();
 
@@ -79,7 +77,7 @@ public class ClientMenu {
 
 	}
 
-	public void savePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException{
+	public void savePassword() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException {
 		System.out.println("Please insert a domain : ");
 		String domain = input.nextLine();
 		System.out.println("Please insert an username : ");
@@ -93,7 +91,7 @@ public class ClientMenu {
 		System.out.println(finalResponse);
 	}
 
-	public void registerUser() throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	public void registerUser() throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException,KeyStoreException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
 		if(getClient().getPublicKey()!= null) {
 			// Implementar vários logins mesmo user
 			System.out.println("User already registered");

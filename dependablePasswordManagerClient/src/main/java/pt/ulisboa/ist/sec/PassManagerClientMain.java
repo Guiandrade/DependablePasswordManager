@@ -13,16 +13,26 @@ import java.security.spec.*;
 
 public class PassManagerClientMain
 {
+	private static Scanner input = new Scanner(System.in);
+
 	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException {
-		Scanner input = new Scanner(System.in);
+		
 		System.out.println("Please insert client id: ");
 		int selection = input.nextInt();
 		input.nextLine();
-		PassManagerClient client = new PassManagerClient(selection);
+		String pass = getSecretKey();
+		PassManagerClient client = new PassManagerClient(selection,pass);
 		client.init();
 		ClientMenu menu = new ClientMenu(client);
 		while(true){
 			menu.display();
 		}
+	}
+
+
+	public static String getSecretKey(){
+		System.out.println("Please insert keystore password : ");
+		String pass = input.next();
+		return pass;
 	}
 }

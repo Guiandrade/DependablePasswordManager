@@ -1,2 +1,3 @@
-pt/ulisboa/ist/sec/KeyStore.class
+pt/ulisboa/ist/sec/KeyStoreMain.class
 pt/ulisboa/ist/sec/CertificateGenerator.class
+pt/ulisboa/ist/sec/KeyStoreCreator.class

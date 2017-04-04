@@ -29,7 +29,7 @@
 				</executions>
 				<configuration>
 					<killAfter>-1</killAfter><!-- to prevent deprecation warning -->
-					<mainClass>pt.ulisboa.ist.sec.KeyStore</mainClass>
+					<mainClass>pt.ulisboa.ist.sec.KeyStoreMain</mainClass>
 					<arguments>
 					</arguments>
 				</configuration>
