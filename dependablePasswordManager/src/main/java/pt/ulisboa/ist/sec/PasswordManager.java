@@ -110,39 +110,46 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String pass = parts[4];
 		String signature = parts[5];
 		String clientNonce = getRegisteredUsers().get(key);
-		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+		String requestNonce = "";
 
-		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
-			logger.info("Verified Digital Signature!\n");
+		try {
+			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+				logger.info("Verified Digital Signature!\n");
+				
+				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
+					logger.info("Nonce confirmed!\n");
+					savePasswordMap(key,domain,username,pass);
+					getRegisteredUsers().put(key,requestNonce);
+					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
+					String responseStr = byteToString(response);
+					String responseMsg = responseStr + "-" + requestNonce;
+					String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
+					return responseMsg + "-" + sig;
+				}
 
-			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
-				logger.info("Nonce confirmed!\n");
-				savePasswordMap(key,domain,username,pass);
-				getRegisteredUsers().put(key,requestNonce);
-				byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
-				String responseStr = byteToString(response);
-				String responseMsg = responseStr + "-" + requestNonce;
-				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
-				return responseMsg + "-" + sig;
+				else {
+					logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
+					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
+					String responseStr = byteToString(response);
+					String responseMsg = responseStr + "-" + clientNonce;
+					String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
+					return responseMsg + "-" + sig;
+				}
+
 			}
-
 			else {
-				logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
+				logger.info("Error: Digital Signature not verified from savePassword request of user with key "+key+"\n");
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				String responseStr = byteToString(response);
 				String responseMsg = responseStr + "-" + clientNonce;
 				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
 				return responseMsg + "-" + sig;
 			}
-
-		}
-		else {
-			logger.info("Error: Digital Signature not verified from savePassword request of user with key "+key+"\n");
-			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-			String responseStr = byteToString(response);
-			String responseMsg = responseStr + "-" + clientNonce;
-			String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
-			return responseMsg + "-" + sig;
+		} catch (Exception e) {
+			logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
+			String response = "Error";
+			return response + "-" + "Error";
 		}
 	}
 
@@ -184,53 +191,62 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String username = parts[3];
 		String signature = parts[4];
 		String clientNonce = getRegisteredUsers().get(key);
-		String requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+		String requestNonce = "";
 		String messageToSend;
 
-		if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
-			logger.info("Verified Digital Signature!\n");
+		try {
+			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+				logger.info("Verified Digital Signature!\n");
+				
+				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 
-			if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
-				logger.info("Nonce confirmed!\n");
+				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
+					logger.info("Nonce confirmed!\n");
 
-				if (getRegisteredUsers().containsKey(key) && key!= null) {
-					getRegisteredUsers().put(key,requestNonce);
-					Combination combination = new Combination (domain,username);
-					HashMap<Combination,String> userMap = tripletMap.get(key);
-					String result = checkCombination(combination,userMap);
-					if ( result != null) {
-						messageToSend = result + "-" + requestNonce;
-						logger.info("Request of password for user with key "+key+" and domain "+domain+" and username "+ username+" was successful.\n");
+					if (getRegisteredUsers().containsKey(key) && key!= null) {
+						getRegisteredUsers().put(key,requestNonce);
+						Combination combination = new Combination (domain,username);
+						HashMap<Combination,String> userMap = tripletMap.get(key);
+						String result = checkCombination(combination,userMap);
+						if ( result != null) {
+							messageToSend = result + "-" + requestNonce;
+							logger.info("Request of password for user with key "+key+" and domain "+domain+" and username "+ username+" was successful.\n");
+						}
+						else {
+							logger.info("Error: request of user with key "+key+" and domain "+domain+" and username "+ username+", entry does not exist.\n");
+							byte[] response = RSAMethods.cipher("Entry does not exist!",RSAMethods.getClientPublicKey(key));
+							messageToSend = byteToString(response) + "-"+requestNonce;
+						}
 					}
 					else {
-						logger.info("Error: request of user with key "+key+" and domain "+domain+" and username "+ username+", entry does not exist.\n");
-						byte[] response = RSAMethods.cipher("Entry does not exist!",RSAMethods.getClientPublicKey(key));
-						messageToSend = byteToString(response) + "-"+requestNonce;
+						logger.info("Error: request of user with key "+key+", key does not exist.\n");
+						byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
+						messageToSend = byteToString(response) + "-"+clientNonce;
 					}
 				}
+
 				else {
-					logger.info("Error: request of user with key "+key+", key does not exist.\n");
+					logger.info("Error: Nonce incorrect.\n");
 					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 					messageToSend = byteToString(response) + "-"+clientNonce;
 				}
-			}
 
+			}
 			else {
-				logger.info("Error: Nonce incorrect.\n");
+				logger.info("Error: Digital Signature not verified.\n");
+
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				messageToSend = byteToString(response) + "-"+clientNonce;
+
 			}
-
-		}
-		else {
+			String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
+			return messageToSend + "-" + sig;
+		} catch (Exception e) {
 			logger.info("Error: Digital Signature not verified.\n");
-
-			byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-			messageToSend = byteToString(response) + "-"+clientNonce;
-
+			
+			String response = "Error";
+			return response + "-" + "Error";
 		}
-		String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-		return messageToSend + "-" + sig;
 	}
 
 	public void close() throws RemoteException {
