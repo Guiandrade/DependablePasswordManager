@@ -24,7 +24,6 @@ public class PassManagerClient{
 	private PublicKey serverKey;
 	private int seqNum;
 	private int id;
-	private String password;
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
@@ -32,7 +31,7 @@ public class PassManagerClient{
 
 	public PassManagerClient(int id,String pass){
 		this.id = id;
-		password = pass;
+		ksPass = pass.toCharArray();
 	}
 
 	public PublicKey getServerPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
@@ -94,28 +93,21 @@ public class PassManagerClient{
 	public PrivateKey getPrivateKey() throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException, UnrecoverableKeyException {
 		// Read Private Key.
 		
-		/* Read Private Key from file
+		PrivateKey privateKey = null;
+		try {
+			FileInputStream fis = new FileInputStream(keyStorePath);
 
-		File filePrivateKey = new File(privateKeyPath + id+ ".key");
-		FileInputStream fis = new FileInputStream(privateKeyPath + id+ ".key");
-		byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
-		fis.read(encodedPrivateKey);
-		fis.close();
+			KeyStore ks = KeyStore.getInstance("JCEKS");
 
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-		PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
-		PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+			ks.load(fis,ksPass);
+			
+			fis.close();
 
-		*/
-
-		FileInputStream fis = new FileInputStream(keyStorePath);
-
-		KeyStore ks = KeyStore.getInstance("JCEKS");
-
-		ks.load(fis,ksPass);
-		fis.close();
-
-		PrivateKey privateKey = (PrivateKey) ks.getKey(Integer.toString(id), ksPass);
+			privateKey = (PrivateKey) ks.getKey(String.valueOf(id), ksPass);
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
 
 		return privateKey;
 	}

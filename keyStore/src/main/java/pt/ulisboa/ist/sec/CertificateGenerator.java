@@ -90,35 +90,30 @@ public class CertificateGenerator {
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
 
-        FileInputStream fis = new FileInputStream(keyStorePath);
-        ks = KeyStore.getInstance("JCEKS");
-        ks.load(fis,"sec".toCharArray());
-        fis.close();
+        if (id == 0){
+          FileInputStream fis = new FileInputStream(keyStorePath);
+          ks = KeyStore.getInstance("JCEKS");
+          ks.load(fis,"sec".toCharArray());
+          fis.close();
+        }
 
-        // Store Public Key.
+        // Store Public Key on File
         X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(publicKey.getEncoded());
         FileOutputStream fos = new FileOutputStream(publicKeyPath+id+".key");
         fos.write(x509EncodedKeySpec.getEncoded());
 
-         // Store Private Key.
-         
-         /* SAVE PRIVATE KEYS ON FILE
-            
-         PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(privateKey.getEncoded());
-         FileOutputStream os = new FileOutputStream(privateKeyPath+id+".key");
-         os.write(pkcs8EncodedKeySpec.getEncoded());
-         if (id==max){
-             fos.close();
-             os.close();
-         }
-         */
+        // Store Private Key on KeyStore
 
          KeyStore.PrivateKeyEntry skEntry = new KeyStore.PrivateKeyEntry(privateKey,cert);
          String alias = String.valueOf(id);
 
-
          ks.setEntry(alias,skEntry,password);
 
+        // Save KeyStore to file
+         java.io.FileOutputStream fos2 = new java.io.FileOutputStream(keyStorePath);
+         ks.store(fos2,"sec".toCharArray());
+         fos2.close();
+        
    }
 
 }

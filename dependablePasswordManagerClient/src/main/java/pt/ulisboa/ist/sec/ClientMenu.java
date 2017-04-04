@@ -54,7 +54,6 @@ public class ClientMenu {
 	}
 
 	public void exit() {
-		// Complete with close() -> concludes the current session of commands with the client library.
 		System.out.println("Exiting...");
 		System.exit(1);
 

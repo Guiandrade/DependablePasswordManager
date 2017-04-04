@@ -1,6 +1,6 @@
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/DigitalSignature.java
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PassManagerInterface.java
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/RSAMethods.java
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PasswordManager.java
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PasswordManagerMain.java
-/afs/.ist.utl.pt/users/5/5/ist177955/Desktop/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/Combination.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PasswordManager.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/Combination.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PasswordManagerMain.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/PassManagerInterface.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/DigitalSignature.java
+/home/guiandrade/DependablePasswordManager/dependablePasswordManager/src/main/java/pt/ulisboa/ist/sec/RSAMethods.java

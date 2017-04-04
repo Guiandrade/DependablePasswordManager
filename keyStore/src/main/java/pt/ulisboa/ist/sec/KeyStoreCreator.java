@@ -7,7 +7,7 @@ import java.security.cert.CertificateException;
 
 public class KeyStoreCreator {
     
-  private static String keyStorePath = "security/keyStore";
+  private static String keyStorePath = "security/keyStore/keystore.jce";
 
   public KeyStoreCreator() {}
 
@@ -17,7 +17,7 @@ public class KeyStoreCreator {
       KeyStore ks = KeyStore.getInstance("JCEKS");
       ks.load(null,"sec".toCharArray());
 
-      java.io.FileOutputStream fos = new java.io.FileOutputStream(keyStorePath+"/keystore.jce");
+      java.io.FileOutputStream fos = new java.io.FileOutputStream(keyStorePath);
       ks.store(fos,"sec".toCharArray());
 
       fos.close();

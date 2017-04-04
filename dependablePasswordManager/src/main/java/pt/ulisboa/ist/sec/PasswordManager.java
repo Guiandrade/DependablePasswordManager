@@ -308,26 +308,24 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		pubKey = publicKey;
 	}
 
-	public PrivateKey getPrivateKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+	public PrivateKey getPrivateKey() throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException, UnrecoverableKeyException {
 		// Read Private Key.
-		/*File filePrivateKey = new File(privateKeyPath + certificateNum+ ".key");
-		FileInputStream fis = new FileInputStream(privateKeyPath + certificateNum+ ".key");
-		byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
-		fis.read(encodedPrivateKey);
-		fis.close();
-
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-		PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
-		PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);*/
 		
-		FileInputStream fis = new FileInputStream(keyStorePath);
+		PrivateKey privateKey = null;
+		try {
+			FileInputStream fis = new FileInputStream(keyStorePath);
 
-		KeyStore ks = KeyStore.getInstance("JCEKS");
+			KeyStore ks = KeyStore.getInstance("JCEKS");
 
-		ks.load(fis,ksPass);
-		fis.close();
+			ks.load(fis,ksPass);
+			
+			fis.close();
 
-		PrivateKey privateKey = (PrivateKey) ks.getKey(Integer.toString(0), ksPass);
+			privateKey = (PrivateKey) ks.getKey(String.valueOf(0), ksPass);
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
 
 		return privateKey;
 	}
