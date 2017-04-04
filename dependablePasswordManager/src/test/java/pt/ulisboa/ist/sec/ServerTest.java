@@ -106,14 +106,11 @@ public class ServerTest {
 		String msg = messageToSend(domain,username,password,seqNum);
 		
 		StringBuilder newMsg = new StringBuilder(msg);
-		newMsg.insert(400, "a"); //Man in the middle changing the content of message
+		newMsg.insert(4, "a"); //Man in the middle changing the content of message
 		
 		String saveResponse = pm.savePassword(newMsg.toString());
 		
-		byte[] responseTest = RSAMethods.decipher(saveResponse.split("-")[0],cliPrivKey);
-		String responseTestStr = new String(responseTest, "UTF-8");
-		
-		Assert.assertEquals("Error", responseTestStr);
+		Assert.assertEquals("Error", saveResponse.split("-")[0]);
 	}
 	
 	@Test
@@ -186,14 +183,11 @@ public class ServerTest {
 		
 		msg = messageToSend(domain,username,"",seqNum);
 		StringBuilder newMsg = new StringBuilder(msg);
-		newMsg.insert(400, "a"); //Man in the middle changing the content of message
+		newMsg.insert(4, "a"); //Man in the middle changing the content of message
 		
 		String retrieveResponse = pm.retrievePassword(newMsg.toString());
 		
-		byte[] responseTest = RSAMethods.decipher(retrieveResponse.split("-")[0],cliPrivKey);
-		String responseTestStr = new String(responseTest, "UTF-8");
-		
-		Assert.assertEquals("Error", responseTestStr);
+		Assert.assertEquals("Error", retrieveResponse.split("-")[0]);
 	}
 	
 	@Test
