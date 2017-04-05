@@ -112,13 +112,14 @@ public class PassManagerClient{
 		return privateKey;
 	}
 
-	public String checkRetrievedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public String checkRetrievedPassword(String response, String message) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
-		String msg = parts[0] + "-" + parts[1];
+		String[] msgSent = message.split("-");
+		String msg = msgSent[0] + "-" + msgSent[1] + "-" + msgSent[2] + "-" + msgSent[3];
 		String responseMessage = parts[0];
 		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
-		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
+		if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
 				seqNum = seqNum + 1;
 				byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
@@ -134,15 +135,16 @@ public class PassManagerClient{
 		}
 	}
 
-	public String checkSavedPassword(String response) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public String checkSavedPassword(String response,String message) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
-		String msg = parts[0] + parts[1];
+		String[] msgSent = message.split("-");
+		String msg = msgSent[0] + "-" + msgSent[1] + "-" + msgSent[2] + "-" + msgSent[3] + "-" + msgSent[4];
 		String responseMessage = parts[0];
 		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 		String responseString = new String(responseByte,"UTF-8");
-		if(DigitalSignature.verifySignature(getServerPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
+		if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msg))) {
 			if(responseString.equals("Error") || responseString.equals("Password Saved")) {
 				if(seqNum+1 == Integer.parseInt(responseSeqNum)) {
 					seqNum = seqNum + 1;

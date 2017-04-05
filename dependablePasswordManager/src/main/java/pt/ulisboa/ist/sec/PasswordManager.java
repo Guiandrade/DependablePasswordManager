@@ -114,6 +114,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String signature = parts[5];
 		String clientNonce = getRegisteredUsers().get(key);
 		String requestNonce = "";
+		String responseMsg = "";
 
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
@@ -126,18 +127,15 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					getRegisteredUsers().put(key,requestNonce);
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
-					String responseMsg = responseStr + "-" + requestNonce;
-					String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
-					return responseMsg + "-" + sig;
+					responseMsg = responseStr + "-" + requestNonce;
+					
 				}
 
 				else {
 					logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
 					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
-					String responseMsg = responseStr + "-" + clientNonce;
-					String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
-					return responseMsg + "-" + sig;
+					responseMsg = responseStr + "-" + clientNonce;
 				}
 
 			}
@@ -145,14 +143,13 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				logger.info("Error: Digital Signature not verified from savePassword request of user with key "+key+"\n");
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
 				String responseStr = byteToString(response);
-				String responseMsg = responseStr + "-" + clientNonce;
-				String sig = DigitalSignature.getSignature(stringToByte(responseMsg), getPrivateKey());
-				return responseMsg + "-" + sig;
+				responseMsg = responseStr + "-" + clientNonce;
 			}
+			
+			return responseMsg + "-" + signature;
 		} catch (Exception e) {
 			logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
-			String response = "Error";
-			return response + "-" + "Error";
+			return "Error-Error-Error";
 		}
 	}
 
@@ -242,13 +239,12 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				messageToSend = byteToString(response) + "-"+clientNonce;
 
 			}
-			String sig = DigitalSignature.getSignature(stringToByte(messageToSend), getPrivateKey());
-			return messageToSend + "-" + sig;
+			
+			return messageToSend + "-" + signature;
 		} catch (Exception e) {
 			logger.info("Error: Digital Signature not verified.\n");
 			
-			String response = "Error";
-			return response + "-" + "Error";
+			return "Error-Error-Error";
 		}
 	}
 

@@ -68,7 +68,7 @@ public class ClientMenu {
 
 		String message = getClient().messageToSend(domain, username, "");
 		String response = getClient().getStub().retrievePassword(message);
-		String finalResponse = getClient().checkRetrievedPassword(response);
+		String finalResponse = getClient().checkRetrievedPassword(response,message);
 
 		System.out.println(finalResponse);
 		return finalResponse;
@@ -85,7 +85,7 @@ public class ClientMenu {
 
 		String message = getClient().messageToSend(domain, username, pass);
 		String response = getClient().getStub().savePassword(message);
-		String finalResponse = getClient().checkSavedPassword(response);
+		String finalResponse = getClient().checkSavedPassword(response,message);
 		System.out.println(finalResponse);
 	}
 
