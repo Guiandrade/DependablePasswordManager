@@ -28,12 +28,12 @@ To Run:
       
 Instructions Stage 2:
 
-Projecto:
-Em java (ou shell ou outra coisa qualquer) fazer um script para lançar os N servidores:
-(1,N)  --> 1 escritor, N leitores(server)
+      Projecto:
+            - Em java (ou shell ou outra coisa qualquer) fazer um script para lançar os N servidores:
+            - (1,N)  --> 1 escritor, N leitores(server)
 
-# pode se saltar o step 1 do enunciado da parte 2
+Nota : Pode-se se saltar o step 1 do enunciado da parte 2
 
-Relatório:
-      1. Estender e explicar demos/testes (mostrar que está bom contra ameaças)
-      2. Referencia para cada teste(quando falamos de uma ameaça, apontamos para o teste que demonstra que está protegido)
+      Relatório:
+            - Estender e explicar demos/testes (mostrar que está bom contra ameaças)
+            - Referencia para cada teste(quando falamos de uma ameaça, apontamos para o teste que demonstra que está protegido)
