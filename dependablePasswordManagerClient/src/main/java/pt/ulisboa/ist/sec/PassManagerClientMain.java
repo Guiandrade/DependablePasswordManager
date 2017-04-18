@@ -33,7 +33,7 @@ public class PassManagerClientMain
 
 	public static String getSecretKey(){
 		System.out.println("Please insert keystore password : ");
-		String pass = input.next();
+		String pass = input.nextLine();
 		return pass;
 	}
 }

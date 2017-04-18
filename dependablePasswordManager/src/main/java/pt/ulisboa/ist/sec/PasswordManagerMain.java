@@ -10,7 +10,7 @@ import java.security.spec.*;
 public class PasswordManagerMain
 {
 	public static void main(String args[]) throws IOException, NoSuchAlgorithmException,InvalidKeySpecException{
-		int registryPort = 8081;
+		int registryPort =  Integer.parseInt(args[0]);
         try{
             PasswordManager passManager = new PasswordManager();
             Scanner in = new Scanner(System.in);

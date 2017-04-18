@@ -24,6 +24,7 @@ public class PassManagerClient{
 	private PublicKey serverKey;
 	private int seqNum;
 	private int id;
+	private String serverURL = "//localhost:8081/PasswordManager";
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
@@ -44,7 +45,7 @@ public class PassManagerClient{
 
 	public void init(){
 		try{
-			passManagerInt = (PassManagerInterface) Naming.lookup("//localhost:8081/PasswordManager");
+			passManagerInt = (PassManagerInterface) Naming.lookup(serverURL);
 			String response = passManagerInt.startCommunication();
 			System.out.println("Response from Server: "+response);
 		}
