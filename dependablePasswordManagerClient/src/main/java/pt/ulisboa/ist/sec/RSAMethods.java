@@ -17,7 +17,9 @@ import java.security.PrivateKey;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.xml.bind.DatatypeConverter;
 
 public class RSAMethods{
@@ -49,5 +51,17 @@ public class RSAMethods{
 		cipher.init(Cipher.DECRYPT_MODE, privateKey);
 		byte[] message = cipher.doFinal(stringToByte(c_message));
 		return message;
+	}
+	
+	public static boolean verifyMAC(SecretKey sk, String mac, String message) throws NoSuchAlgorithmException, InvalidKeyException {
+		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
+		authenticator.init(sk);
+		byte[] msg = message.getBytes();
+		byte[] msgAuthenticator = authenticator.doFinal(msg);
+		byte[] macToVerify = stringToByte(mac);
+		
+		String msgAuthenticatorStr = byteToString(msgAuthenticator);
+		String macToVerifyStr = byteToString(macToVerify);
+		return msgAuthenticatorStr.equals(macToVerifyStr);
 	}
 }

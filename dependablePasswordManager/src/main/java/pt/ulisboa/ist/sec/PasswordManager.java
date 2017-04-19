@@ -10,6 +10,7 @@ import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.*;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,7 +22,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private int clientId=1;
 	private int certificateNum=0;
 	private HashMap<String,String> registeredUsers = new HashMap<String,String>();
-	private HashMap<String,HashMap<Combination,String>> tripletMap = new  HashMap<String,HashMap<Combination,String> >();  // String will be a Key
+	private HashMap<String,HashMap<Combination,String>> tripletMap = new HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private PublicKey pubKey;
