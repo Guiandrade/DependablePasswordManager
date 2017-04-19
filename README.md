@@ -19,12 +19,12 @@ To Run:
       - mvn compile
       - mvn exec:java
       (On the number of keys wanted please input at least 1)
-2) Go to the dependablePasswordManagerServer folder on the terminal and run the following commands:
-      - mvn compile
-      - mvn exec:java
+2) Go to the dependablePasswordManagerServer folder on the terminal and run the following commands (for 3 servers ):
+      - sh servers.sh 3
 3) Go to the dependablePasswordManagerClient folder on the terminal and run the following commands:
-      - mvn compile
-      - mvn exec:java
+      - mvn compile exec:java -Dexec.args="1 3"
+      - (on another terminal) mvn compile exec:java -Dexec.args="2 3" 
+      - (on another terminal) mvn compile exec:java -Dexec.args="3 3"    
       
 Instructions Stage 2:
 

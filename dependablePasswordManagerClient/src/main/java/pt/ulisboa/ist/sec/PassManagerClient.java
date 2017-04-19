@@ -7,6 +7,7 @@ import java.rmi.RemoteException;
 import java.security.*;
 import java.security.spec.*;
 import java.util.Base64;
+import java.util.ArrayList;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -24,7 +25,7 @@ public class PassManagerClient{
 	private PublicKey serverKey;
 	private int seqNum;
 	private int id;
-	private String serverURL = "//localhost:8081/PasswordManager";
+	private ArrayList<String> serversList = new ArrayList<String>();
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
@@ -43,11 +44,15 @@ public class PassManagerClient{
 		return publicKey;
 	}
 
-	public void init(){
+	public void init(int numServers){
 		try{
-			passManagerInt = (PassManagerInterface) Naming.lookup(serverURL);
-			String response = passManagerInt.startCommunication();
-			System.out.println("Response from Server: "+response);
+			for (int i=1;i<=numServers;i++){
+				String serverURL ="//localhost:808"+String.valueOf(i)+"/PasswordManager";
+				passManagerInt = (PassManagerInterface) Naming.lookup(serverURL);
+				String response = passManagerInt.startCommunication();
+				System.out.println("Response from Server: "+response);
+				serversList.add(serverURL);
+			}
 		}
 		catch(Exception e) {System.out.println("Lookup: " + e.getMessage());}
 	}
@@ -93,7 +98,7 @@ public class PassManagerClient{
 
 	public PrivateKey getPrivateKey() throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException, UnrecoverableKeyException {
 		// Read Private Key.
-		
+
 		PrivateKey privateKey = null;
 		try {
 			FileInputStream fis = new FileInputStream(keyStorePath);
@@ -101,7 +106,7 @@ public class PassManagerClient{
 			KeyStore ks = KeyStore.getInstance("JCEKS");
 
 			ks.load(fis,ksPass);
-			
+
 			fis.close();
 
 			privateKey = (PrivateKey) ks.getKey(String.valueOf(id), ksPass);

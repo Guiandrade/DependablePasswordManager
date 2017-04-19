@@ -17,13 +17,12 @@ public class PassManagerClientMain
 	private static Scanner input = new Scanner(System.in);
 
 	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, UnrecoverableKeyException, CertificateException, KeyStoreException {
-		
-		System.out.println("Please insert client id: ");
-		int selection = input.nextInt();
-		input.nextLine();
+		// Receives id from args[0] and number of servers from args[1]
+		int id = Integer.parseInt(args[0]);
+		int numServers = Integer.parseInt(args[1]);
 		String pass = getSecretKey();
-		PassManagerClient client = new PassManagerClient(selection,pass);
-		client.init();
+		PassManagerClient client = new PassManagerClient(id,pass);
+		client.init(numServers);
 		ClientMenu menu = new ClientMenu(client);
 		while(true){
 			menu.display();
