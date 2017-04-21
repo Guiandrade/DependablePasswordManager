@@ -11,21 +11,19 @@ Before testing if remote object calling is working, please open a terminal windo
 rmiregistry &
 
 (For Windows)
-start rmiregistry 
+start rmiregistry
 
 To Run:
 
 1) Go to the keyStore folder on the terminal and run the following commands:
       - mvn compile
       - mvn exec:java
-      (On the number of keys wanted please input at least 1)
+      (On the number of keys wanted please input at least 3)
 2) Go to the dependablePasswordManagerServer folder on the terminal and run the following commands (for 3 servers ):
       - sh servers.sh 3
-3) Go to the dependablePasswordManagerClient folder on the terminal and run the following commands:
-      - mvn compile exec:java -Dexec.args="1 3"
-      - (on another terminal) mvn compile exec:java -Dexec.args="2 3" 
-      - (on another terminal) mvn compile exec:java -Dexec.args="3 3"    
-      
+3) Go to the dependablePasswordManagerClient folder on the terminal and run the following command (for 3 clients and 3 servers):
+      - sh clients.sh 3 3
+
 Instructions Stage 2:
 
       Projecto:

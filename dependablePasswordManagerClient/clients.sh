@@ -6,6 +6,6 @@
 x=1
 while [ $x -le $1 ]
 do
-  gnome-terminal -e "bash -c \"mvn compile exec:java -Dexec.args=""$x""$2""; exec bash\"" #TO-DO NOT READING BOTH ARGS
+  gnome-terminal -e "bash -c \"mvn compile exec:java -Dexec.args='"$x" "$2"' \""
   x=$(( $x + 1 ))
 done
