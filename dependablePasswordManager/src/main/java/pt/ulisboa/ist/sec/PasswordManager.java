@@ -26,35 +26,34 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private PublicKey pubKey;
-	private final Logger logger = Logger.getLogger("MyLog");  
-    private FileHandler fh = null;
-    private static char[] ksPass = "sec".toCharArray();
-    private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
+	private final Logger logger = Logger.getLogger("MyLog");
+  private FileHandler fh = null;
+  private static char[] ksPass = "sec".toCharArray();
+  private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
 
-	public PasswordManager () throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+	public PasswordManager (int registryPort) throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
-		createLog();
-		
-	}
+		createLog(registryPort);
+}
 
-	public void createLog() throws SecurityException,IOException {
+	public void createLog(int registryPort) throws SecurityException,IOException {
 
-		try {  
-
-        // This block configure the logger with handler and formatter  
-        fh = new FileHandler("./log/LogFile.log",true);  // true allows appending to existing file
+		try {
+				String logFile = "./log/LogFile-"+registryPort+".log";
+        // This block configure the logger with handler and formatter
+        fh = new FileHandler(logFile,true);  // true allows appending to existing file
         logger.addHandler(fh);
-        SimpleFormatter formatter = new SimpleFormatter();  
-        fh.setFormatter(formatter);  
+        SimpleFormatter formatter = new SimpleFormatter();
+        fh.setFormatter(formatter);
 
-        // the following statement is used to log any messages  
-        logger.info("Server using log file!\n");  
+        // the following statement is used to log any messages
+        logger.info("Server using log file!\n");
 
-    	} catch (SecurityException e) {  
-        	e.printStackTrace();  
-    	} catch (IOException e) {  
-        	e.printStackTrace();  
-    	}  
+    	} catch (SecurityException e) {
+        	e.printStackTrace();
+    	} catch (IOException e) {
+        	e.printStackTrace();
+    	}
 	}
 
 	public byte[] stringToByte(String str) {
@@ -67,7 +66,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public String startCommunication() throws RemoteException {
 		// TO DO KEY/Ip,port PAIR to allow multiple devices
-		logger.info("Connected to client with pair key/ip,port : " + "TO DO\n");
+		logger.info("Connected to client with device with secretKey  : " + "TO DO\n");
 		clientId++;
 		return "Connected with server!";
 	}
@@ -97,7 +96,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			return message + "-" + sig;
 		}
 		else{
-			logger.info("Error: Could not validate signature from user with key "+key+"\n"); 
+			logger.info("Error: Could not validate signature from user with key "+key+"\n");
 			return "Error: Could not validate signature.";
 		}
 
@@ -120,7 +119,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 				logger.info("Verified Digital Signature!\n");
-				
+
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 					logger.info("Nonce confirmed!\n");
@@ -129,7 +128,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
-					
+
 				}
 
 				else {
@@ -146,7 +145,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				String responseStr = byteToString(response);
 				responseMsg = responseStr + "-" + clientNonce;
 			}
-			
+
 			return responseMsg + "-" + signature;
 		} catch (Exception e) {
 			logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
@@ -198,7 +197,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 				logger.info("Verified Digital Signature!\n");
-				
+
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 
 				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
@@ -240,11 +239,11 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				messageToSend = byteToString(response) + "-"+clientNonce;
 
 			}
-			
+
 			return messageToSend + "-" + signature;
 		} catch (Exception e) {
 			logger.info("Error: Digital Signature not verified.\n");
-			
+
 			return "Error-Error-Error";
 		}
 	}
@@ -307,7 +306,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public PrivateKey getPrivateKey() throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException, UnrecoverableKeyException {
 		// Read Private Key.
-		
+
 		PrivateKey privateKey = null;
 		try {
 			FileInputStream fis = new FileInputStream(keyStorePath);
@@ -315,7 +314,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			KeyStore ks = KeyStore.getInstance("JCEKS");
 
 			ks.load(fis,ksPass);
-			
+
 			fis.close();
 
 			privateKey = (PrivateKey) ks.getKey(String.valueOf(0), ksPass);

@@ -15,14 +15,10 @@ start rmiregistry
 
 To Run:
 
-1) Go to the keyStore folder on the terminal and run the following commands:
-      - mvn compile
-      - mvn exec:java
-      (On the number of keys wanted please input at least 3)
-2) Go to the dependablePasswordManagerServer folder on the terminal and run the following commands (for 3 servers ):
-      - sh servers.sh 3
-3) Go to the dependablePasswordManagerClient folder on the terminal and run the following command (for 3 clients and 3 servers):
-      - sh clients.sh 3 3
+1) Go to the project folder on the terminal and run the following command (creates 5 keyPairs,3 clients and 3 servers):
+      - sh autoSetup.sh
+
+2) Insert KeyStore spassword "sec" when prompted on each Server.      
 
 Instructions Stage 2:
 

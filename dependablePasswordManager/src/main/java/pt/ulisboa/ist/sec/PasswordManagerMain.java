@@ -12,7 +12,7 @@ public class PasswordManagerMain
 	public static void main(String args[]) throws IOException, NoSuchAlgorithmException,InvalidKeySpecException{
 		int registryPort =  Integer.parseInt(args[0]);
         try{
-            PasswordManager passManager = new PasswordManager();
+            PasswordManager passManager = new PasswordManager(registryPort);
             Scanner in = new Scanner(System.in);
 						int input=-1;
             Registry reg = LocateRegistry.createRegistry(registryPort);
