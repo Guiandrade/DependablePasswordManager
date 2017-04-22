@@ -39,7 +39,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public void createLog(int registryPort) throws SecurityException,IOException {
 
 		try {
-				String logFile = "./log/LogFile-"+registryPort+".log";
+				String logFile = "./log/LogFile-Server@"+registryPort+".log";
         // This block configure the logger with handler and formatter
         fh = new FileHandler(logFile,true);  // true allows appending to existing file
         logger.addHandler(fh);
@@ -66,13 +66,13 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public String startCommunication() throws RemoteException {
 		// TO DO KEY/Ip,port PAIR to allow multiple devices
-		logger.info("Connected to client with device with secretKey  : " + "TO DO\n");
 		clientId++;
 		return "Connected with server!";
 	}
 
 	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, UnrecoverableKeyException, KeyStoreException, CertificateException  {
 		// Registers or Logs User s
+		// logger.info("Connected to client with device with secretKey  : " + "TO DO\n");
 		String secretKey;
 		String seqNum;
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
