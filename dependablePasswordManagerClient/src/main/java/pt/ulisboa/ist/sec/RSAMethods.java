@@ -64,4 +64,12 @@ public class RSAMethods{
 		String macToVerifyStr = byteToString(macToVerify);
 		return msgAuthenticatorStr.equals(macToVerifyStr);
 	}
+	
+	public static String generateMAC(SecretKey sk, String message) throws NoSuchAlgorithmException, InvalidKeyException {
+		Mac authenticator = Mac.getInstance(sk.getAlgorithm());
+		authenticator.init(sk);
+		byte[] msg = message.getBytes();
+		byte[] msgAuthenticator = authenticator.doFinal(msg);
+		return byteToString(msgAuthenticator);
+	}
 }
