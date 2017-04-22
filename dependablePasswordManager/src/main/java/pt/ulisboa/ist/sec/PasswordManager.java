@@ -24,7 +24,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private HashMap<String,String> registeredUsers = new HashMap<String,String>();
 	private HashMap<String,HashMap<Combination,String>> tripletMap = new HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
-	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private PublicKey pubKey;
 	private final Logger logger = Logger.getLogger("MyLog");
   private FileHandler fh = null;

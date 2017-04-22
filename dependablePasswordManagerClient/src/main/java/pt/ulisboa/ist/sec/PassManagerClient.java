@@ -27,7 +27,6 @@ public class PassManagerClient{
 	private int id;
 	private ArrayList<String> serversList = new ArrayList<String>();
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
-	private static String privateKeyPath = "../keyStore/security/privateKeys/privatekey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
 	private static char[] ksPass = "sec".toCharArray();
 
