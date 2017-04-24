@@ -15,7 +15,7 @@ start rmiregistry
 
 To Run:
 
-1) Go to the project folder on the terminal and run the following command (creates 5 keyPairs,3 clients and 3 servers):
+1) Go to the project folder on the terminal and run the following command (creates 3 clients and 3 servers):
       - sh autoSetup.sh
 
 2) Insert KeyStore spassword "sec" when prompted on each Server.      

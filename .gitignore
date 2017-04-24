@@ -37,6 +37,5 @@ buildNumber.properties
 !/.mvn/wrapper/maven-wrapper.jar
 
 
-# Exclude .dat and .key files
+# Exclude .dat files
 *.dat
-*.key
