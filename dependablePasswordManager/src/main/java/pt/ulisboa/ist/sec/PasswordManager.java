@@ -21,14 +21,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	private int clientId=1;
 	private int certificateNum=0;
-	private HashMap<String,String> registeredUsers = new HashMap<String,String>();
+	private HashMap<String,HashMap<SecretKey,String>> registeredUsers = new HashMap<String,HashMap<SecretKey,String>>();
 	private HashMap<String,HashMap<Combination,String>> tripletMap = new HashMap<String,HashMap<Combination,String> >();  // String will be a Key
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private PublicKey pubKey;
 	private final Logger logger = Logger.getLogger("MyLog");
-  private FileHandler fh = null;
-  private static char[] ksPass = "sec".toCharArray();
-  private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
+	private FileHandler fh = null;
+	private static char[] ksPass = "sec".toCharArray();
+	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
 
 	public PasswordManager (int registryPort) throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
@@ -72,62 +72,71 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, UnrecoverableKeyException, KeyStoreException, CertificateException  {
 		// Registers or Logs User s
 		// logger.info("Connected to client with device with secretKey  : " + "TO DO\n");
-		String secretKey;
-		String seqNum;
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			logger.info("Verified Digital Signature!\n");
+			SecretKey secretKey = RSAMethods.generateSecretKey();
+			String seqNum = String.valueOf(0);
 			if(!getRegisteredUsers().containsKey(key)){
-				secretKey = generateSecretKey();
-				seqNum = String.valueOf(0);
-				getRegisteredUsers().put(key,seqNum);
+				HashMap<SecretKey,String> hash = new HashMap<SecretKey,String>();
+				hash.put(secretKey, seqNum);
+				getRegisteredUsers().put(key, hash);				
 				logger.info("Successful registration of user with key "+key+"\n");
 			}
 			else{
-				seqNum = getRegisteredUsers().get(key);
+				HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+				hash.put(secretKey,seqNum);
+				getRegisteredUsers().put(key, hash);
 				logger.info("Successful login of user with key "+key+"\n");
+				seqNum = "login";
 			}
-
 			byte[] cipheredSeqNum = RSAMethods.cipher(seqNum,RSAMethods.getClientPublicKey(key));
+			byte[] cipheredSecretKey = RSAMethods.cipher(byteToString(secretKey.getEncoded()),RSAMethods.getClientPublicKey(key));
 			String publicKey = byteToString(pubKey.getEncoded());
-			String message = byteToString(cipheredSeqNum) + "-" + publicKey;
-			String sig = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
+			String message = publicKey + "-" + byteToString(cipheredSeqNum) + "-" + byteToString(cipheredSecretKey) + "-" + signature;
+			String mac = RSAMethods.generateMAC(secretKey, message);
 
-			return message + "-" + sig;
+			return message + "-" + mac;
 		}
 		else{
-			logger.info("Error: Could not validate signature from user with key "+key+"\n");
-			return "Error: Could not validate signature.";
+			logger.info("Error: Could not validate signature from user with key "+key+"\n"); 
+			return "Error-Error-Error-Error-Error";
 		}
-
 	}
 
 	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
 
 		String[] parts = message.split("-");
-		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
+		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4] + "-" + parts[5];
 		String key = parts[0];
-		String nonce = parts[1];
-		String domain = parts[2];
-		String username = parts[3];
-		String pass = parts[4];
-		String signature = parts[5];
-		String clientNonce = getRegisteredUsers().get(key);
+		String seqNum = parts[1];
+		String secKey = parts[2];
+		String domain = parts[3];
+		String username = parts[4];
+		String pass = parts[5];
+		String signature = parts[6];
+		String clientNonce = "";
 		String requestNonce = "";
 		String responseMsg = "";
-
+		SecretKey secretKey = null;
+		
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 				logger.info("Verified Digital Signature!\n");
-
+				byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
+				String secretKeyStr = new String(secretKeyByte, "UTF-8");
+				secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+				clientNonce = getRegisteredUsers().get(key).get(secretKey);
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
-				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
+				if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
 					logger.info("Nonce confirmed!\n");
 					savePasswordMap(key,domain,username,pass);
-					getRegisteredUsers().put(key,requestNonce);
+					HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+					hash.put(secretKey,requestNonce);
+					getRegisteredUsers().put(key, hash);
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
-
+					
 				}
 
 				else {
@@ -144,11 +153,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				String responseStr = byteToString(response);
 				responseMsg = responseStr + "-" + clientNonce;
 			}
-
-			return responseMsg + "-" + signature;
+			String msgToSend = responseMsg + "-" + signature;
+			
+			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
+			return msgToSend + "-" + mac;
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
-			return "Error-Error-Error";
+			return "Error-Error-Error-Error";
 		}
 	}
 
@@ -183,51 +195,58 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public String retrievePassword(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
 
 		String[] parts = message.split("-");
-		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
+		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
 		String key = parts[0];
 		String nonce = parts[1];
-		String domain = parts[2];
-		String username = parts[3];
-		String signature = parts[4];
-		String clientNonce = getRegisteredUsers().get(key);
+		String secKey = parts[2];
+		String domain = parts[3];
+		String username = parts[4];
+		String signature = parts[5];
+		String clientNonce = "";
 		String requestNonce = "";
-		String messageToSend;
+		String responseMsg = "";
+		SecretKey secretKey = null;
 
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 				logger.info("Verified Digital Signature!\n");
-
+				byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
+				String secretKeyStr = new String(secretKeyByte, "UTF-8");
+				secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+				clientNonce = getRegisteredUsers().get(key).get(secretKey);
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 
 				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 					logger.info("Nonce confirmed!\n");
 
 					if (getRegisteredUsers().containsKey(key) && key!= null) {
-						getRegisteredUsers().put(key,requestNonce);
+						HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+						hash.put(secretKey,requestNonce);
+						getRegisteredUsers().put(key, hash);
 						Combination combination = new Combination (domain,username);
 						HashMap<Combination,String> userMap = tripletMap.get(key);
 						String result = checkCombination(combination,userMap);
 						if ( result != null) {
-							messageToSend = result + "-" + requestNonce;
+							responseMsg = result + "-" + requestNonce;
 							logger.info("Request of password for user with key "+key+" and domain "+domain+" and username "+ username+" was successful.\n");
 						}
 						else {
 							logger.info("Error: request of user with key "+key+" and domain "+domain+" and username "+ username+", entry does not exist.\n");
 							byte[] response = RSAMethods.cipher("Entry does not exist!",RSAMethods.getClientPublicKey(key));
-							messageToSend = byteToString(response) + "-"+requestNonce;
+							responseMsg = byteToString(response) + "-"+requestNonce;
 						}
 					}
 					else {
 						logger.info("Error: request of user with key "+key+", key does not exist.\n");
 						byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-						messageToSend = byteToString(response) + "-"+clientNonce;
+						responseMsg = byteToString(response) + "-"+clientNonce;
 					}
 				}
 
 				else {
 					logger.info("Error: Nonce incorrect.\n");
 					byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-					messageToSend = byteToString(response) + "-"+clientNonce;
+					responseMsg = byteToString(response) + "-"+clientNonce;
 				}
 
 			}
@@ -235,15 +254,18 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				logger.info("Error: Digital Signature not verified.\n");
 
 				byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-				messageToSend = byteToString(response) + "-"+clientNonce;
+				responseMsg = byteToString(response) + "-"+clientNonce;
 
 			}
-
-			return messageToSend + "-" + signature;
+			String msgToSend = responseMsg + "-" + signature;
+			
+			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
+			
+			return msgToSend + "-" + mac;
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.info("Error: Digital Signature not verified.\n");
-
-			return "Error-Error-Error";
+			return "Error-Error-Error-Error";
 		}
 	}
 
@@ -255,7 +277,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			logger.info("Server successfully closed.\n");
 	}
 
-	public HashMap<String,String> getRegisteredUsers() {
+	public HashMap<String,HashMap<SecretKey,String>> getRegisteredUsers() {
 		return registeredUsers;
 	}
 
