@@ -26,7 +26,7 @@ public class PassManagerClient{
 	private SecretKey secretKey;
 	private int seqNum;
 	private int id;
-	private ArrayList<String> serversList = new ArrayList<String>();
+	private ArrayList<PassManagerInterface> serversList = new ArrayList<PassManagerInterface>();
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
 	private static char[] ksPass = "sec".toCharArray();
@@ -51,7 +51,7 @@ public class PassManagerClient{
 				passManagerInt = (PassManagerInterface) Naming.lookup(serverURL);
 				String response = passManagerInt.startCommunication();
 				System.out.println("Response from Server: "+response);
-				serversList.add(serverURL);
+				serversList.add(passManagerInt);
 			}
 		}
 		catch(Exception e) {System.out.println("Lookup: " + e.getMessage());}
@@ -156,7 +156,7 @@ public class PassManagerClient{
 		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		String mac = parts[3];
-		
+
 		String msgRecieved = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		if(RSAMethods.verifyMAC(secretKey, mac, msgRecieved)) {
 			byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
@@ -182,7 +182,7 @@ public class PassManagerClient{
 		else {
 			return "Error";
 		}
-		
+
 	}
 
 	public String messageToSend(String domain, String username, String pass) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
