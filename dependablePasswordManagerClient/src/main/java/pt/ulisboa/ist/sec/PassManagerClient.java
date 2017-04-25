@@ -17,6 +17,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.cert.CertificateException;
 import javax.xml.bind.DatatypeConverter;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PassManagerClient{
 
@@ -209,15 +211,59 @@ public class PassManagerClient{
 		return message;
 	}
 
-	public int getId() {
-		return id;
-	}
+	public String registerUser(String key, String signature) throws RemoteException {
+		final int numServers = serversList.size();
+		final AtomicInteger acks =  new AtomicInteger();
+		final ConcurrentHashMap<Integer,String> map = new ConcurrentHashMap<Integer,String>();
+		final String publicKey = key;
+		final String sig = signature;
 
-	public void setId(int id) {
-		this.id = id;
+		// let's send the request to all servers and wait for the response of the majority
+		for (int i=0; i<numServers; i++){
+			final PassManagerInterface serverInt = serversList.get(i);
+		  final int server_id = i;
+			Thread t = new Thread(new Runnable(){
+				@Override
+				public void run() {
+					try{
+							String result;
+							String response = serverInt.registerUser(publicKey,sig);
+							if (processRegisterResponse(response,sig)){
+									result = "Successfuly registered/logged in.";
+							}
+							else{
+									result = "Digital Signature or seqNumber could not be verified.";
+							}
+							map.put(server_id,result);
+							acks.incrementAndGet();
+							return;
+					}catch(RemoteException e){
+						map.put(server_id, e.toString());
+						acks.incrementAndGet();
+					}catch (Exception e) {
+						// byzantine
+					}
+				}
+			});
+			t.start();
 	}
+	// wait for the majority of the replicas to reply
+	while(acks.get() < (serversList.size() / 2)+1){
+		try {
+			Thread.sleep(25);
+			System.out.println("acks = " + acks.get());
+		}	catch (InterruptedException e) {
+			e.printStackTrace();
+			}
+		}
+	String finalValue="";
+	for (String value : map.values()){
+		finalValue=value;
+	}
+	return finalValue;
+}
 
-	public void processRegisterResponse(String response, String signature) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public boolean processRegisterResponse(String response, String signature) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
 		String serverPubKey = parts[0];
@@ -236,18 +282,21 @@ public class PassManagerClient{
 				seqNum = 0;
 				if (seqNumStr.equals("login")){
 						System.out.println("User Logged In Successfuly!");
+
 				}
 				else{
 						System.out.println("User Registered Successfuly!");
 				}
-
+				return true;
 			}
 			else {
-				System.out.println("Error Registering User");
+				//System.out.println("Error Registering User");
+				return false;
 			}
 		}
 		else {
-			System.out.println("Error Registering User");
+			//System.out.println("Error Registering User");
+			return false;
 		}
 	}
 }

@@ -64,14 +64,12 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	}
 
 	public String startCommunication() throws RemoteException {
-		// TO DO KEY/Ip,port PAIR to allow multiple devices
 		clientId++;
 		return "Connected with server!";
 	}
 
 	public String registerUser(String key,String signature) throws SignatureException,NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, UnrecoverableKeyException, KeyStoreException, CertificateException  {
 		// Registers or Logs User s
-		// logger.info("Connected to client with device with secretKey  : " + "TO DO\n");
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			logger.info("Verified Digital Signature!\n");
 			SecretKey secretKey = RSAMethods.generateSecretKey();
@@ -79,7 +77,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			if(!getRegisteredUsers().containsKey(key)){
 				HashMap<SecretKey,String> hash = new HashMap<SecretKey,String>();
 				hash.put(secretKey, seqNum);
-				getRegisteredUsers().put(key, hash);				
+				getRegisteredUsers().put(key, hash);
 				logger.info("Successful registration of user with key "+key+"\n");
 			}
 			else{
@@ -98,7 +96,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			return message + "-" + mac;
 		}
 		else{
-			logger.info("Error: Could not validate signature from user with key "+key+"\n"); 
+			logger.info("Error: Could not validate signature from user with key "+key+"\n");
 			return "Error-Error-Error-Error-Error";
 		}
 	}
@@ -118,7 +116,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String requestNonce = "";
 		String responseMsg = "";
 		SecretKey secretKey = null;
-		
+
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 				logger.info("Verified Digital Signature!\n");
@@ -136,7 +134,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
-					
+
 				}
 
 				else {
@@ -154,7 +152,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				responseMsg = responseStr + "-" + clientNonce;
 			}
 			String msgToSend = responseMsg + "-" + signature;
-			
+
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {
@@ -258,9 +256,9 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			}
 			String msgToSend = responseMsg + "-" + signature;
-			
+
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
-			
+
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {
 			e.printStackTrace();

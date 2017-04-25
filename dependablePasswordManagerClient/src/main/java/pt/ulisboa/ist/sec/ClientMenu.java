@@ -98,8 +98,10 @@ public class ClientMenu {
 		getClient().setPublicKey(); // Find key on file
 
 		String signature = DigitalSignature.getSignature(getClient().getPublicKey().getEncoded(),getClient().getPrivateKey());
-		String response = getClient().getStub().registerUser(getClient().getPublicKeyString(),signature);
-		getClient().processRegisterResponse(response,signature);
+		String result = getClient().registerUser(getClient().getPublicKeyString(),signature);
+
+		System.out.println(result);
+
 	}
 
 	public PassManagerClient getClient() {
