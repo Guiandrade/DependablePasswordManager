@@ -9,4 +9,4 @@ sh servers.sh 3
 # Create 3 clients
 cd ..
 cd dependablePasswordManagerClient
-sh clients.sh 3 3
+sh clients.sh 1 3

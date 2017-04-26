@@ -107,14 +107,15 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public String savePassword(String message) throws InvalidKeyException, NoSuchAlgorithmException, NumberFormatException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException {
 
 		String[] parts = message.split("-");
-		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4] + "-" + parts[5];
+		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4] + "-" + parts[5] + "-" + parts[6];
 		String key = parts[0];
 		String seqNum = parts[1];
 		String sKString = parts[2];
 		String domain = parts[3];
 		String username = parts[4];
 		String pass = parts[5];
-		String signature = parts[6];
+		String timestamp = parts[6];
+		String signature = parts[7];
 		String clientNonce = "";
 		String requestNonce = "";
 		String responseMsg = "";
@@ -140,7 +141,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
-
 				}
 
 				else {
@@ -158,7 +158,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				responseMsg = responseStr + "-" + clientNonce;
 			}
 			String msgToSend = responseMsg + "-" + signature;
-			System.out.println(" VAI DAR NULL -> "+secretKey);
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {

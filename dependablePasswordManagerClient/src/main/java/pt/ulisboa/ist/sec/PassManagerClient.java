@@ -137,7 +137,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		if(RSAMethods.verifyMAC(serversList.get(server), mac, msgReceived)) {
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
-					seqNum = seqNum + 1;
 					byte[] timestampByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 					int timestamp= Integer.parseInt(new String(timestampByte, "UTF-8"));
 					System.out.println("TimeStamp for the pair on server is : "+ timestamp);
@@ -189,7 +188,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		}
 	}
 
-	public String checkSavedPassword(String response,String message,PassManagerInterface inter) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized String checkSavedPassword(String response,String message,PassManagerInterface inter) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
 		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + "-" + msg[4] + "-" + msg[5];
@@ -197,27 +196,27 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		String mac = parts[3];
-
 		String msgRecieved = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		if(RSAMethods.verifyMAC(serversList.get(inter), mac, msgRecieved)) {
 			byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 			String responseString = new String(responseByte,"UTF-8");
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(responseString.equals("Error") || responseString.equals("Password Saved")) {
-					if(seqNum+1 == Integer.parseInt(responseSeqNum)) {
-						seqNum = seqNum + 1;
+					System.out.println("Entra no equals e depois do verifySignature");
+					if(seqNum +1 == Integer.parseInt(responseSeqNum)) {
+						System.out.println("FEZ O GOLO");
 						return responseString;
 					}
 					else {
-						return "Error";
+						return "Error: seqNumber not right";
 					}
 				}
 				else {
-					return "Error";
+					return "Error in responseString";
 				}
 			}
 			else {
-				return "Error";
+				return "Error: Could not validate DigitalSignature";
 			}
 		}
 		else {
@@ -242,7 +241,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			// For GetTimestamps or receivePassword messages
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
 			String send_password = byteToString(c_password);
-			System.out.println("SK que vai ser enviada na mensagem -> "+ serversList.get(inter)+ " associado a interface "+inter);
 			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
 		}
 		else {
@@ -312,7 +310,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String secretKeyStr = new String(secKeyByte, "UTF-8");
 		SecretKey secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
 		serversList.put(server,secretKey);
-		System.out.println("SK que foi guardada -> "+ secretKey+ " associado a interface "+server);
 		String mac = RSAMethods.generateMAC(secretKey, msg);
 		if(RSAMethods.verifyMAC(secretKey, mac, msg)) {
 			if(sig.equals(signature)) {
@@ -375,6 +372,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			e.printStackTrace();
 		}
 		// filter to have only servers with highest timestamp
+		seqNum+=1;
 		int maxTimeStamp=0;
 		for (PassManagerInterface server : map.keySet()){
 				int value = map.get(server);
@@ -422,6 +420,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			}catch(InterruptedException e){
 				e.printStackTrace();
 			}
+			seqNum+=1;
 			String finalValue=map.values().iterator().next();
 			return finalValue;
 			}
@@ -460,6 +459,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			}catch(InterruptedException e){
 				e.printStackTrace();
 			}
+			seqNum+=1;
 			String finalValue=mapResponses.values().iterator().next();
 			return finalValue;
 			}
