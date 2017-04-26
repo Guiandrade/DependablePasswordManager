@@ -18,7 +18,7 @@ public class PasswordManagerMain
             Registry reg = LocateRegistry.createRegistry(registryPort);
             reg.rebind("PasswordManager", passManager);
 
-            System.out.println("Server ready! Input the number 0 to exit .");
+            System.out.println("Server ready at port "+registryPort+"! Input the number 0 to exit .");
 						while(input!=0){
 								input = in.nextInt();
 						}

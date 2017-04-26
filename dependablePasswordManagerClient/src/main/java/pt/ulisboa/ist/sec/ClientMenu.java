@@ -9,6 +9,7 @@ import java.util.Scanner;
 import javax.crypto.*;
 import javax.xml.bind.DatatypeConverter;
 import java.security.cert.CertificateException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientMenu {
 
@@ -19,7 +20,7 @@ public class ClientMenu {
 		this.setClient(client);
 	}
 
-	public void display() throws SignatureException,RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
+	public void display() throws InterruptedException,SignatureException,RemoteException, IOException, NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
 		System.out.println("----- PasswordManager Client -----");
 		System.out.println(
 				"Select an option: \n" +
@@ -66,12 +67,11 @@ public class ClientMenu {
 		System.out.println("Please insert an username : ");
 		String username =  input.nextLine();
 
-		String message = getClient().messageToSend(domain, username, "");
-		String response = getClient().getStub().retrievePassword(message);
-		String finalResponse = getClient().checkRetrievedPassword(response,message);
+		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
+		String response = getClient().processRetrieveRequest(domain,username,mapServersMessages);
 
-		System.out.println(finalResponse);
-		return finalResponse;
+		System.out.println(response);
+		return response;
 
 	}
 
@@ -83,13 +83,13 @@ public class ClientMenu {
 		System.out.println("Please insert the password: ");
 		String pass =  input.nextLine();
 
-		String message = getClient().messageToSend(domain, username, pass);
-		String response = getClient().getStub().savePassword(message);
-		String finalResponse = getClient().checkSavedPassword(response,message);
-		System.out.println(finalResponse);
+		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
+		final int timestamp = mapServersMessages.values().iterator().next();
+		String response = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages);
+		System.out.println(response);
 	}
 
-	public void registerUser() throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException,KeyStoreException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
+	public void registerUser() throws InterruptedException,SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException,KeyStoreException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
 		if(getClient().getPublicKey()!= null) {
 			// Implementar vários logins mesmo user
 			System.out.println("User already registered");

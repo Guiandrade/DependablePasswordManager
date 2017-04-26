@@ -15,20 +15,22 @@ import java.util.logging.*;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
+import java.util.concurrent.ConcurrentMap;
 
 
 public class PasswordManager extends UnicastRemoteObject implements PassManagerInterface {
 
 	private int clientId=1;
 	private int certificateNum=0;
-	private HashMap<String,HashMap<SecretKey,String>> registeredUsers = new HashMap<String,HashMap<SecretKey,String>>();
-	private HashMap<String,HashMap<Combination,String>> tripletMap = new HashMap<String,HashMap<Combination,String> >();  // String will be a Key
+	private ConcurrentHashMap<String,ConcurrentHashMap<SecretKey,String>> registeredUsers = new ConcurrentHashMap<String,ConcurrentHashMap<SecretKey,String>>();
+	private ConcurrentHashMap<String,ConcurrentHashMap<Combination,String>> tripletMap = new ConcurrentHashMap<String,ConcurrentHashMap<Combination,String> >();  // String will be a Key
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private PublicKey pubKey;
 	private final Logger logger = Logger.getLogger("MyLog");
 	private FileHandler fh = null;
 	private static char[] ksPass = "sec".toCharArray();
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
+	private SecretKey secKeyy;
 
 	public PasswordManager (int registryPort) throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
@@ -73,15 +75,16 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			logger.info("Verified Digital Signature!\n");
 			SecretKey secretKey = RSAMethods.generateSecretKey();
+			secKeyy = secretKey;
 			String seqNum = String.valueOf(0);
 			if(!getRegisteredUsers().containsKey(key)){
-				HashMap<SecretKey,String> hash = new HashMap<SecretKey,String>();
+				ConcurrentHashMap<SecretKey,String> hash = new ConcurrentHashMap<SecretKey,String>();
 				hash.put(secretKey, seqNum);
-				getRegisteredUsers().put(key, hash);
+				registeredUsers.put(key, hash);
 				logger.info("Successful registration of user with key "+key+"\n");
 			}
 			else{
-				HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+				ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
 				hash.put(secretKey,seqNum);
 				getRegisteredUsers().put(key, hash);
 				logger.info("Successful login of user with key "+key+"\n");
@@ -119,16 +122,19 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 		try {
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+
 				logger.info("Verified Digital Signature!\n");
 				byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
 				String secretKeyStr = new String(secretKeyByte, "UTF-8");
 				secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
 				clientNonce = getRegisteredUsers().get(key).get(secretKey);
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+
 				if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
+
 					logger.info("Nonce confirmed!\n");
 					savePasswordMap(key,domain,username,pass);
-					HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+					ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
 					hash.put(secretKey,requestNonce);
 					getRegisteredUsers().put(key, hash);
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
@@ -164,7 +170,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public String savePasswordMap(String key, String domain, String username, String password) throws RemoteException {
 		if (getRegisteredUsers().containsKey(key) && key!= null) {
-			HashMap<Combination, String> domainsMap;
+			ConcurrentHashMap<Combination, String> domainsMap;
 			Combination combination = new Combination (domain,username);
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
@@ -174,7 +180,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				}
 			}
 			else{
-				domainsMap = new HashMap<Combination,String>();
+				domainsMap = new ConcurrentHashMap<Combination,String>();
 			}
 
 			domainsMap.put(combination,password);
@@ -185,7 +191,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 		else{
 			logger.info("Error: Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" can't be saved on server due to illegal arguments!\n");
-			return "Error: Illegal Arguments."; // Maybe put custom Exception here
+			return "Error: Illegal Arguments.";
 		}
 
 	}
@@ -211,18 +217,19 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
 				String secretKeyStr = new String(secretKeyByte, "UTF-8");
 				secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
-				clientNonce = getRegisteredUsers().get(key).get(secretKey);
+				ConcurrentHashMap<SecretKey,String> map = registeredUsers.get(key);
+				clientNonce = map.get(secretKey);
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 
 				if(Integer.parseInt(nonce) == Integer.parseInt(requestNonce)) {
 					logger.info("Nonce confirmed!\n");
 
 					if (getRegisteredUsers().containsKey(key) && key!= null) {
-						HashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+						ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
 						hash.put(secretKey,requestNonce);
 						getRegisteredUsers().put(key, hash);
 						Combination combination = new Combination (domain,username);
-						HashMap<Combination,String> userMap = tripletMap.get(key);
+						ConcurrentHashMap<Combination,String> userMap = tripletMap.get(key);
 						String result = checkCombination(combination,userMap);
 						if ( result != null) {
 							responseMsg = result + "-" + requestNonce;
@@ -275,11 +282,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			logger.info("Server successfully closed.\n");
 	}
 
-	public HashMap<String,HashMap<SecretKey,String>> getRegisteredUsers() {
+	public synchronized ConcurrentHashMap<String,ConcurrentHashMap<SecretKey,String>> getRegisteredUsers() {
 		return registeredUsers;
 	}
 
-	public String checkCombination(Combination c,HashMap<Combination,String> userMap){
+	public String checkCombination(Combination c,ConcurrentHashMap<Combination,String> userMap){
+		if (userMap == null){
+			return null;
+		}
 		for(Combination combinationSaved : userMap.keySet()){
 			if (c.equalsTo(combinationSaved)){
 				return userMap.get(combinationSaved);
@@ -288,9 +298,9 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return null;
 	}
 
-	public boolean updatePassword(Combination c,HashMap<Combination,String> userMap,String pass){
+	public boolean updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
 		for(Combination combinationSaved : userMap.keySet()){
-			if (c.equalsTo(combinationSaved)){
+			if (c.equalsTo(combinationSaved) && c.getTimeStamp() > combinationSaved.getTimeStamp()){
 				userMap.put(combinationSaved,pass);
 				return true;
 			}
@@ -344,4 +354,84 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 		return privateKey;
 	}
+
+	public String retrieveTimestamp(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException{
+
+				String[] parts = message.split("-");
+				String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
+				String key = parts[0];
+				String seqNum = parts[1];
+				String secKey = parts[2];
+				String domain = parts[3];
+				String username = parts[4];
+				String signature = parts[5];
+				String clientNonce = "";
+				String requestNonce = "";
+				String responseMsg = "";
+				SecretKey secretKey = null;
+
+				try {
+					if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
+						logger.info("Verified Digital Signature!\n");
+						byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
+						String secretKeyStr = new String(secretKeyByte, "UTF-8");
+						secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+						ConcurrentHashMap<SecretKey,String> map = registeredUsers.get(key);
+						clientNonce = map.get(secretKey);
+						requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
+						if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
+							logger.info("Nonce confirmed!\n");
+							String actualTimestamp = getTimestamp(key,domain,username);
+							ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
+							hash.put(secretKey,requestNonce);
+							getRegisteredUsers().put(key, hash);
+							byte[] response = RSAMethods.cipher(actualTimestamp,RSAMethods.getClientPublicKey(key));
+							String responseStr = byteToString(response);
+							responseMsg = responseStr + "-" + requestNonce;
+
+						}
+
+						else {
+							logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
+							byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
+							String responseStr = byteToString(response);
+							responseMsg = responseStr + "-" + clientNonce;
+						}
+
+					}
+					else {
+						byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
+						String responseStr = byteToString(response);
+						responseMsg = responseStr + "-" + clientNonce;
+					}
+					String msgToSend = responseMsg + "-" + signature;
+
+					String mac = RSAMethods.generateMAC(secretKey, msgToSend);
+					return msgToSend + "-" + mac;
+				} catch (Exception e) {
+					e.printStackTrace();
+					logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
+					return "Error-Error-Error-Error";
+				}
+	}
+
+	public String getTimestamp(String key,String domain, String username){
+
+		if (getRegisteredUsers().containsKey(key) && key!= null) {
+			ConcurrentHashMap<Combination, String> domainsMap;
+			Combination c = new Combination (domain,username);
+
+			if (tripletMap.get(key)!= null){
+				domainsMap = tripletMap.get(key);
+				for(Combination combinationSaved : domainsMap.keySet()){
+					if (c.equalsTo(combinationSaved)){
+						return Integer.toString(combinationSaved.getTimeStamp());
+					}
+				}
+			}
+			return "0";
+		}
+		return "Error";
+	}
+
 }

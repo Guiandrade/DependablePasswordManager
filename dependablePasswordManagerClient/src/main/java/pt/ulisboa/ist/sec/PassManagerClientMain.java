@@ -16,7 +16,7 @@ public class PassManagerClientMain
 {
 	private static Scanner input = new Scanner(System.in);
 
-	public static void main( String[] args ) throws SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, UnrecoverableKeyException, CertificateException, KeyStoreException {
+	public static void main( String[] args ) throws InterruptedException,SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchPaddingException, UnrecoverableKeyException, CertificateException, KeyStoreException {
 		// Receives id from args[0] and number of servers from args[1]
 		int id = Integer.parseInt(args[0]);
 		int numServers = Integer.parseInt(args[1]);
