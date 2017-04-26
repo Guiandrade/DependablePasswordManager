@@ -30,7 +30,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	private FileHandler fh = null;
 	private static char[] ksPass = "sec".toCharArray();
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
-	private SecretKey secKeyy;
+	private SecretKey secKey;
 
 	public PasswordManager (int registryPort) throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
@@ -75,7 +75,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		if (DigitalSignature.verifySignature(stringToByte(key),stringToByte(signature),stringToByte(key))){
 			logger.info("Verified Digital Signature!\n");
 			SecretKey secretKey = RSAMethods.generateSecretKey();
-			secKeyy = secretKey;
+			secKey = secretKey;
 			String seqNum = String.valueOf(0);
 			if(!getRegisteredUsers().containsKey(key)){
 				ConcurrentHashMap<SecretKey,String> hash = new ConcurrentHashMap<SecretKey,String>();
@@ -110,7 +110,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4] + "-" + parts[5];
 		String key = parts[0];
 		String seqNum = parts[1];
-		String secKey = parts[2];
+		String sKString = parts[2];
 		String domain = parts[3];
 		String username = parts[4];
 		String pass = parts[5];
@@ -124,7 +124,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
 
 				logger.info("Verified Digital Signature!\n");
-				byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
+				byte[] secretKeyByte = RSAMethods.decipher(sKString, getPrivateKey());
 				String secretKeyStr = new String(secretKeyByte, "UTF-8");
 				secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
 				clientNonce = getRegisteredUsers().get(key).get(secretKey);
@@ -158,7 +158,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				responseMsg = responseStr + "-" + clientNonce;
 			}
 			String msgToSend = responseMsg + "-" + signature;
-
+			System.out.println(" VAI DAR NULL -> "+secretKey);
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {

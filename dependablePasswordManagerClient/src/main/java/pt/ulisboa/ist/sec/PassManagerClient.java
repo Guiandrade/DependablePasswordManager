@@ -28,7 +28,6 @@ public class PassManagerClient{
 	private PassManagerInterface passManagerInt;
 	private PublicKey pubKey;
 	private PublicKey serverKey;
-	private SecretKey secretKey;
 	private int seqNum;
 	private int id;
 	private ArrayList<PassManagerInterface> servers = new ArrayList<PassManagerInterface>();
@@ -227,7 +226,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 
 	}
 
-	public String messageToSend(String domain, String username, String pass, String timestamp, PassManagerInterface inter) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized String messageToSend(String domain, String username, String pass, String timestamp, PassManagerInterface inter) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, getPublicKey());
@@ -243,6 +242,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			// For GetTimestamps or receivePassword messages
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
 			String send_password = byteToString(c_password);
+			System.out.println("SK que vai ser enviada na mensagem -> "+ serversList.get(inter)+ " associado a interface "+inter);
 			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
 		}
 		else {
@@ -312,6 +312,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String secretKeyStr = new String(secKeyByte, "UTF-8");
 		SecretKey secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
 		serversList.put(server,secretKey);
+		System.out.println("SK que foi guardada -> "+ secretKey+ " associado a interface "+server);
 		String mac = RSAMethods.generateMAC(secretKey, msg);
 		if(RSAMethods.verifyMAC(secretKey, mac, msg)) {
 			if(sig.equals(signature)) {
