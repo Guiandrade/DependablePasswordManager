@@ -18,6 +18,7 @@ import java.security.spec.InvalidKeySpecException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.xml.bind.DatatypeConverter;
 
 import org.junit.Assert;
@@ -30,6 +31,7 @@ public class ServerTest {
 	private static PrivateKey cliPrivKey;
 	private static PublicKey servPubKey;
 	private static PrivateKey servPrivKey;
+	private static SecretKey secretKey;
 	
 	@BeforeClass
 	public static void keyInitializations() throws NoSuchAlgorithmException {
@@ -48,12 +50,14 @@ public class ServerTest {
         servPrivKey = pairServ.getPrivate();
 	}
 
+	///////////////////////// SECURITY TESTS /////////////////////////
+	
 	// REGISTER USER TESTS
 	
 	@Test
 	public void registerUserTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -63,7 +67,7 @@ public class ServerTest {
 	@Test
 	public void registerUserFailingTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),servPrivKey));
 		
@@ -75,7 +79,7 @@ public class ServerTest {
 	@Test
 	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -84,7 +88,7 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
 		String saveResponse = pm.savePassword(msg);
 		
@@ -97,7 +101,7 @@ public class ServerTest {
 	@Test
 	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -106,7 +110,7 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
 		StringBuilder newMsg = new StringBuilder(msg);
 		newMsg.insert(4, "a"); //Man in the middle changing the content of message
@@ -119,7 +123,7 @@ public class ServerTest {
 	@Test
 	public void savePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -128,7 +132,7 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
 		pm.savePassword(msg);
 		String saveResponse2 = pm.savePassword(msg.toString()); // Replay attack by sending msg twice
@@ -144,7 +148,7 @@ public class ServerTest {
 	@Test
 	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -153,12 +157,12 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		pm.savePassword(msg);
 		
 		seqNum = 1;
 		
-		msg = messageToSend(domain,username,"",seqNum);
+		msg = messageToSend(domain,username,"","1",seqNum);
 		String retrieveResponse = pm.retrievePassword(msg);
 		
 		byte[] responseTest = RSAMethods.decipher(retrieveResponse.split("-")[0],cliPrivKey);
@@ -170,7 +174,7 @@ public class ServerTest {
 	@Test
 	public void retrievePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -179,12 +183,12 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		pm.savePassword(msg);
 		
 		seqNum = 1;
 		
-		msg = messageToSend(domain,username,"",seqNum);
+		msg = messageToSend(domain,username,"","1",seqNum);
 		StringBuilder newMsg = new StringBuilder(msg);
 		newMsg.insert(4, "a"); //Man in the middle changing the content of message
 		
@@ -196,7 +200,7 @@ public class ServerTest {
 	@Test
 	public void retrievePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
-		PasswordManager pm = new PasswordManager();
+		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
@@ -205,12 +209,12 @@ public class ServerTest {
 		String password = "123aBc456";
 		int seqNum = 0;
 		
-		String msg = messageToSend(domain,username,password,seqNum);
+		String msg = messageToSend(domain,username,password,"0",seqNum);
 		pm.savePassword(msg);
 		
 		seqNum = 1;
 		
-		msg = messageToSend(domain,username,"",seqNum);
+		msg = messageToSend(domain,username,"","1",seqNum);
 		pm.retrievePassword(msg);
 		String retrieveResponse2 = pm.retrievePassword(msg);
 		
@@ -220,24 +224,32 @@ public class ServerTest {
 		Assert.assertEquals("Error", responseTestStr);
 	}
 	
+	///////////////////////// REPLICATION TESTS /////////////////////////
 	
-	public String messageToSend(String domain, String username, String pass, int seqNum) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException {
+	//to do
+	
+	///////////////////////// SUPPORT METHODS /////////////////////////
+	
+	public synchronized String messageToSend(String domain, String username, String pass, String timestamp, int seqNum) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String publicKey = byteToString(cliPubKey.getEncoded());
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, cliPubKey);
 		byte[] c_username = RSAMethods.cipherPubKeyCliNoPadding(username, cliPubKey);
+		byte[] c_timestamp = RSAMethods.cipherPubKeyCliPadding(timestamp, cliPubKey);
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);
+		String send_timestamp = byteToString(c_timestamp);
 		String message = "";
 
-		if(!(pass.equals(""))) {
+		if((!pass.equals(""))&&(!timestamp.equals(""))) {
+			// For GetTimestamps or receivePassword messages
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, cliPubKey);
 			String send_password = byteToString(c_password);
-			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + send_domain + "-" + send_username + "-" + send_password;
+			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(secretKey.getEncoded()), servPubKey)) + "-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
 		}
 		else {
-			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + send_domain + "-" + send_username;
+			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(secretKey.getEncoded()), servPubKey)) + "-" + send_domain + "-" + send_username;
 		}
 
 		String signature = DigitalSignature.getSignature(stringToByte(message), cliPrivKey);
