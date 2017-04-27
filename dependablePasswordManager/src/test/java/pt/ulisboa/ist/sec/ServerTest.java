@@ -1,10 +1,14 @@
 package pt.ulisboa.ist.sec;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -14,11 +18,13 @@ import java.security.SignatureException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 import org.junit.Assert;
@@ -32,22 +38,20 @@ public class ServerTest {
 	private static PublicKey servPubKey;
 	private static PrivateKey servPrivKey;
 	private static SecretKey secretKey;
+	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
+	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
+	private static char[] ksPass = "sec".toCharArray();
 	
 	@BeforeClass
-	public static void keyInitializations() throws NoSuchAlgorithmException {
-		KeyPairGenerator keyGenCli = KeyPairGenerator.getInstance("RSA");
-        SecureRandom randomCli = SecureRandom.getInstance("SHA1PRNG");
-        keyGenCli.initialize(2048, randomCli);
-        KeyPair pairCli = keyGenCli.generateKeyPair();
-        cliPubKey = pairCli.getPublic();
-        cliPrivKey = pairCli.getPrivate();
-        
+	public static void keyInitializations() throws NoSuchAlgorithmException, UnrecoverableKeyException, KeyStoreException, CertificateException, IOException, InvalidKeySpecException {
+		
         KeyPairGenerator keyGenServ = KeyPairGenerator.getInstance("RSA");
         SecureRandom randomServ = SecureRandom.getInstance("SHA1PRNG");
         keyGenServ.initialize(2048, randomServ);
         KeyPair pairServ = keyGenServ.generateKeyPair();
-        servPubKey = pairServ.getPublic();
         servPrivKey = pairServ.getPrivate();
+        cliPrivKey = getPrivateKey();
+        setPublicKey();
 	}
 
 	///////////////////////// SECURITY TESTS /////////////////////////
@@ -60,7 +64,7 @@ public class ServerTest {
 		PasswordManager pm = new PasswordManager(8080);
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
-		
+
 		Assert.assertNotSame(response, "Error: Could not validate signature.");
 	}
 	
@@ -71,7 +75,7 @@ public class ServerTest {
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),servPrivKey));
 		
-		Assert.assertEquals(response, "Error: Could not validate signature.");
+		Assert.assertEquals(response, "Error-Error-Error-Error-Error");
 	}
 	
 	// SAVE PASSWORD TESTS
@@ -80,8 +84,14 @@ public class ServerTest {
 	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+		
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		String domain = "facebook";
 		String username = "test";
@@ -91,7 +101,6 @@ public class ServerTest {
 		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
 		String saveResponse = pm.savePassword(msg);
-		
 		byte[] responseTest = RSAMethods.decipher(saveResponse.split("-")[0],cliPrivKey);
 		String responseTestStr = new String(responseTest, "UTF-8");
 		
@@ -137,10 +146,10 @@ public class ServerTest {
 		pm.savePassword(msg);
 		String saveResponse2 = pm.savePassword(msg.toString()); // Replay attack by sending msg twice
 		
-		byte[] responseTest = RSAMethods.decipher(saveResponse2.split("-")[0],cliPrivKey);
-		String responseTestStr = new String(responseTest, "UTF-8");
+		//byte[] responseTest = RSAMethods.decipher(saveResponse2.split("-")[0],cliPrivKey);
+		//String responseTestStr = new String(responseTest, "UTF-8");
 		
-		Assert.assertEquals("Error", responseTestStr);
+		Assert.assertEquals("Error", saveResponse2.split("-")[0]);
 	}
 	
 	// RETRIEVE PASSWORD TESTS
@@ -149,8 +158,14 @@ public class ServerTest {
 	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()),
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+		
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		String domain = "facebook";
 		String username = "test";
@@ -161,7 +176,6 @@ public class ServerTest {
 		pm.savePassword(msg);
 		
 		seqNum = 1;
-		
 		msg = messageToSend(domain,username,"","1",seqNum);
 		String retrieveResponse = pm.retrievePassword(msg);
 		
@@ -218,10 +232,10 @@ public class ServerTest {
 		pm.retrievePassword(msg);
 		String retrieveResponse2 = pm.retrievePassword(msg);
 		
-		byte[] responseTest = RSAMethods.decipher(retrieveResponse2.split("-")[0],cliPrivKey);
-		String responseTestStr = new String(responseTest, "UTF-8");
+		//byte[] responseTest = RSAMethods.decipher(retrieveResponse2.split("-")[0],cliPrivKey);
+		//String responseTestStr = new String(responseTest, "UTF-8");
 		
-		Assert.assertEquals("Error", responseTestStr);
+		Assert.assertEquals("Error", retrieveResponse2.split("-")[0]);
 	}
 	
 	///////////////////////// REPLICATION TESTS /////////////////////////
@@ -263,5 +277,50 @@ public class ServerTest {
 
 	public String byteToString(byte[] byt) {
 		return DatatypeConverter.printBase64Binary(byt);
+	}
+
+	public PublicKey getServerPublicKey(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
+		byte[] pk = stringToByte(key);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(pk);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+		return publicKey;
+	}
+
+	public static void setPublicKey() throws IOException, NoSuchAlgorithmException,InvalidKeySpecException {
+		// Read Public Key.
+		File filePublicKey = new File(publicKeyPath + 1 +".key");
+		FileInputStream fis = new FileInputStream(publicKeyPath + 1 +".key");
+		byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
+		fis.read(encodedPublicKey);
+		fis.close();
+
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+		cliPubKey = publicKey;
+	}
+
+	public static PrivateKey getPrivateKey() throws IOException,KeyStoreException,NoSuchAlgorithmException,CertificateException, UnrecoverableKeyException {
+		// Read Private Key.
+
+		PrivateKey privateKey = null;
+		try {
+			FileInputStream fis = new FileInputStream(keyStorePath);
+
+			KeyStore ks = KeyStore.getInstance("JCEKS");
+
+			ks.load(fis,ksPass);
+
+			fis.close();
+
+			privateKey = (PrivateKey) ks.getKey(String.valueOf(1), ksPass);
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+
+		return privateKey;
 	}
 }
