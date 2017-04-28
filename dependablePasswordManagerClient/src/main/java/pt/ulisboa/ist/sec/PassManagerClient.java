@@ -158,7 +158,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		}
 	}
 
-	public String checkRetrievedPassword(String response, String message,PassManagerInterface inter) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public String checkRetrievedPassword(String response, String message,PassManagerInterface inter, boolean test, SecretKey sk) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
 		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + msg[4];
@@ -167,7 +167,14 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String responseSignature = parts[2];
 		String mac = parts[3];
 		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
-		if(RSAMethods.verifyMAC(serversList.get(inter), mac, msgReceived)) {
+		SecretKey secretKey;
+		if(test==true) {
+			secretKey = sk;
+		}
+		else {
+			secretKey = serversList.get(inter);
+		}
+		if(RSAMethods.verifyMAC(secretKey, mac, msgReceived)) {
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
 					seqNum = seqNum + 1;
@@ -188,23 +195,31 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		}
 	}
 
-	public synchronized String checkSavedPassword(String response,String message,PassManagerInterface inter) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized String checkSavedPassword(String response,String message,PassManagerInterface inter, boolean test, SecretKey sk) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
-		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + "-" + msg[4] + "-" + msg[5];
+		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + "-" + msg[4] + "-" + msg[5] + "-" + msg[6];
 		String responseMessage = parts[0];
 		String responseSeqNum = parts[1];
 		String responseSignature = parts[2];
 		String mac = parts[3];
 		String msgRecieved = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
-		if(RSAMethods.verifyMAC(serversList.get(inter), mac, msgRecieved)) {
+		SecretKey secretKey;
+		if(test==true) {
+			secretKey = sk;
+		}
+		else {
+			secretKey = serversList.get(inter);
+		}
+		if(RSAMethods.verifyMAC(secretKey, mac, msgRecieved)) {
 			byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 			String responseString = new String(responseByte,"UTF-8");
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(responseString.equals("Error") || responseString.equals("Password Saved")) {
-					System.out.println("Entra no equals e depois do verifySignature");
 					if(seqNum +1 == Integer.parseInt(responseSeqNum)) {
-						System.out.println("FEZ O GOLO");
+						if(test==true) {
+							seqNum+=1;
+						}
 						return responseString;
 					}
 					else {
@@ -268,7 +283,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 					try{
 							String result;
 							String response = serverInt.registerUser(publicKey,sig);
-							if (processRegisterResponse(response,sig,serverInt)){
+							if (processRegisterResponse(response,sig,serverInt,false,null)){
 									result = "Successfuly registered/logged in.";
 							}
 							else{
@@ -298,19 +313,26 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 	return finalValue;
 }
 
-	public synchronized boolean processRegisterResponse(String response, String signature, PassManagerInterface server) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized boolean processRegisterResponse(String response, String signature, PassManagerInterface server, boolean test, SecretKey sk) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String msg = parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3];
 		String serverPubKey = parts[0];
 		String cipheredNounce = parts[1];
 		String secKey = parts[2];
 		String sig = parts[3];
-		serverKey = getServerPublicKey(serverPubKey);
-		byte[] secKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
-		String secretKeyStr = new String(secKeyByte, "UTF-8");
-		SecretKey secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
-		serversList.put(server,secretKey);
-		String mac = RSAMethods.generateMAC(secretKey, msg);
+		String mac = parts[4];
+		SecretKey secretKey;
+		if(test == true) {
+			secretKey = sk;
+		}
+		else {
+			serverKey = getServerPublicKey(serverPubKey);
+			byte[] secKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
+			String secretKeyStr = new String(secKeyByte, "UTF-8");
+			secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+			serversList.put(server,secretKey);
+		}
+		//String mac = RSAMethods.generateMAC(secretKey, msg);
 		if(RSAMethods.verifyMAC(secretKey, mac, msg)) {
 			if(sig.equals(signature)) {
 				byte [] keyByte = RSAMethods.decipher(cipheredNounce,getPrivateKey());
@@ -399,7 +421,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 						public void run() {
 							try{
 									String response = serverInt.retrievePassword(message);
-									String finalResponse = checkRetrievedPassword(response,message,serverInt);
+									String finalResponse = checkRetrievedPassword(response,message,serverInt,false,null);
 									map.put(serverInt,finalResponse);
 									return;
 								}catch(RemoteException e){
@@ -439,7 +461,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 						public void run() {
 							try{
 									String response = serverInt.savePassword(message);
-									String finalResponse = checkSavedPassword(response,message,serverInt);
+									String finalResponse = checkSavedPassword(response,message,serverInt,false,null);
 									mapResponses.put(serverInt,finalResponse);
 									return;
 								}catch(RemoteException e){
