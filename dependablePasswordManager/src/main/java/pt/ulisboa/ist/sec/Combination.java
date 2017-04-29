@@ -5,7 +5,7 @@ public class Combination {
 
 	private String attribute1;
 	private String attribute2;
-	private AtomicInteger timeStamp;
+	private AtomicInteger timeStamp = new AtomicInteger();
 
 	public Combination(String x, String y){
 		attribute1 = x;

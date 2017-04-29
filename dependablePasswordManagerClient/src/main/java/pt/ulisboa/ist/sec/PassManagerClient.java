@@ -143,7 +143,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 					return timestamp;
 				}
 				else {
-					System.out.println("Error");
+					System.out.println("Error : Could not validate seqNum");
 					return -1;
 				}
 			}
@@ -223,7 +223,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 						return responseString;
 					}
 					else {
-						return "Error: seqNumber not right";
+						return "Error: Could not validate seqNum";
 					}
 				}
 				else {
@@ -245,7 +245,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, getPublicKey());
 		byte[] c_username = RSAMethods.cipherPubKeyCliNoPadding(username, getPublicKey());
-		byte[] c_timestamp = RSAMethods.cipherPubKeyCliNoPadding(timestamp, getPublicKey());
+		byte[] c_timestamp = RSAMethods.cipherPubKeyCliPadding(timestamp, serverKey);
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);
