@@ -83,72 +83,105 @@ public class ServerTest {
 	@Test
 	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Set global variables for Secret Key and Server Public Key that will be used in following tests
 		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
 		String secretKeyStr = new String(secretKeyByte, "UTF-8");
 		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
-		
 		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
+		// Simulate the request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
+		// Call savePassword method on server
 		String saveResponse = pm.savePassword(msg);
+
+		// Analyse the correctness of the answer
 		byte[] responseTest = RSAMethods.decipher(saveResponse.split("-")[0],cliPrivKey);
 		String responseTestStr = new String(responseTest, "UTF-8");
-		
 		Assert.assertEquals("Password Saved", responseTestStr);
+	}
+
+	@Test
+	public void savePasswordConfidentialityTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the server and registration
+		PasswordManager pm = new PasswordManager(8080);
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+		
+		// Simulate the request from client
+		String domain = "facebook";
+		String username = "test";
+		String password = "123aBc456";
+		int seqNum = 0;
+		String msg = messageToSend(domain,username,password,"0",seqNum);
+		
+		// Call savePassword method on server
+		String saveResponse = pm.savePassword(msg);
+
+		// Check the confientiality of the answer
+		String cipheredResponse = byteToString(RSAMethods.cipher("Password Saved",cliPubKey));
+		Assert.assertEquals(cipheredResponse, saveResponse.split("-")[0]);
 	}
 	
 	@Test
 	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Simulate the request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
+		//Simulate a Man-In-The-Middle attack by changing the content of message
 		StringBuilder newMsg = new StringBuilder(msg);
-		newMsg.insert(4, "a"); //Man in the middle changing the content of message
+		newMsg.insert(4, "a");
 		
+		// Call savePassword method on server
 		String saveResponse = pm.savePassword(newMsg.toString());
-		
+
+		// Check the integrity of the server
 		Assert.assertEquals("Error", saveResponse.split("-")[0]);
 	}
 	
 	@Test
 	public void savePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Simulate the request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
+		// Simulate a Replay Attack by sending the same message twice
 		pm.savePassword(msg);
 		String saveResponse2 = pm.savePassword(msg.toString()); // Replay attack by sending msg twice
 		
 		//byte[] responseTest = RSAMethods.decipher(saveResponse2.split("-")[0],cliPrivKey);
 		//String responseTestStr = new String(responseTest, "UTF-8");
 		
+		// Check the way server deals with freshness of messages
 		Assert.assertEquals("Error", saveResponse2.split("-")[0]);
 	}
 	
@@ -157,84 +190,133 @@ public class ServerTest {
 	@Test
 	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()),
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Set global variables for Secret Key and Server Public Key that will be used in following tests
 		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
 		String secretKeyStr = new String(secretKeyByte, "UTF-8");
 		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
-		
 		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
+		// Simulate the save request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
+		
+		// Call savePassword method on server
 		pm.savePassword(msg);
 		
+		// Simulate the retrieve request from client
 		seqNum = 1;
 		msg = messageToSend(domain,username,"","1",seqNum);
+
+		// Call retrievePassword method on server
 		String retrieveResponse = pm.retrievePassword(msg);
 		
+		// Analyse the correctness of the answer
 		byte[] responseTest = RSAMethods.decipher(retrieveResponse.split("-")[0],cliPrivKey);
 		String responseTestStr = new String(responseTest, "UTF-8");
-		
 		Assert.assertEquals(password, responseTestStr);
+	}
+
+	@Test
+	public void retrievePasswordConfidentialityTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the server and registration
+		PasswordManager pm = new PasswordManager(8080);
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()),
+				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+		
+		// Simulate the save request from client
+		String domain = "facebook";
+		String username = "test";
+		String password = "123aBc456";
+		int seqNum = 0;
+		String msg = messageToSend(domain,username,password,"0",seqNum);
+		
+		// Call savePassword method on server
+		pm.savePassword(msg);
+		
+		// Simulate the retrieve request from client
+		seqNum = 1;
+		msg = messageToSend(domain,username,"","1",seqNum);
+
+		// Call retrievePassword method on server
+		String retrieveResponse = pm.retrievePassword(msg);
+		
+		// Check the confientiality of the answer
+		String cipheredResponse = byteToString(RSAMethods.cipher(password,cliPubKey));
+		Assert.assertEquals(cipheredResponse, retrieveResponse.split("-")[0]);
 	}
 	
 	@Test
 	public void retrievePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Simulate the save request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
+
+		// Call savePassword method on server
 		pm.savePassword(msg);
 		
+		// Simulate the retrieve request from client
 		seqNum = 1;
-		
 		msg = messageToSend(domain,username,"","1",seqNum);
+
+		//Simulate a Man-In-The-Middle attack by changing the content of message
 		StringBuilder newMsg = new StringBuilder(msg);
-		newMsg.insert(4, "a"); //Man in the middle changing the content of message
+		newMsg.insert(4, "a");
 		
+		// Call retrievePassword method on server
 		String retrieveResponse = pm.retrievePassword(newMsg.toString());
 		
+		// Check the integrity of the server
 		Assert.assertEquals("Error", retrieveResponse.split("-")[0]);
 	}
 	
 	@Test
 	public void retrievePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Simulate the save request from client
 		PasswordManager pm = new PasswordManager(8080);
 		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
+		// Simulate the save request from client
 		String domain = "facebook";
 		String username = "test";
 		String password = "123aBc456";
 		int seqNum = 0;
-		
 		String msg = messageToSend(domain,username,password,"0",seqNum);
+
+		// Call savePassword method on server
 		pm.savePassword(msg);
-		
+
+		// Simulate the retrieve request from client
 		seqNum = 1;
-		
 		msg = messageToSend(domain,username,"","1",seqNum);
+
+		// Simulate a Replay Attack by sending the same message twice
 		pm.retrievePassword(msg);
 		String retrieveResponse2 = pm.retrievePassword(msg);
 		
 		//byte[] responseTest = RSAMethods.decipher(retrieveResponse2.split("-")[0],cliPrivKey);
 		//String responseTestStr = new String(responseTest, "UTF-8");
 		
+		// Check the way server deals with freshness of messages
 		Assert.assertEquals("Error", retrieveResponse2.split("-")[0]);
 	}
 	
