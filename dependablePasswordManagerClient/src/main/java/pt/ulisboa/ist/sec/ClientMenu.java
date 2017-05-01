@@ -70,13 +70,13 @@ public class ClientMenu {
 		// Request
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
 		final int timestamp = mapServersMessages.values().iterator().next();
-		String response = getClient().processRetrieveRequest(domain,username,mapServersMessages);
+		String response = getClient().processRequest(domain,username,"",-1,mapServersMessages,"retrieve");
 
 		// Update Replicas
 		String[] passArray = response.split(":");
 		String pass = passArray[1];
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
-		String response2 = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages2);
+		String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
 
 		System.out.println(response);
 		return response;
@@ -93,13 +93,13 @@ public class ClientMenu {
 
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
 		final int timestamp = mapServersMessages.values().iterator().next();
-		String response = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages);
+		String response = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages,"save");
 
 		// Update Replicas
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
-		String response2 = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages2);
+		String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
 
-		System.out.println(response);
+		System.out.println(response2);
 	}
 
 	public void registerUser() throws InterruptedException,SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException,KeyStoreException, CertificateException, KeyStoreException,UnrecoverableKeyException  {
