@@ -73,10 +73,12 @@ public class ClientMenu {
 		String response = getClient().processRequest(domain,username,"",-1,mapServersMessages,"retrieve");
 
 		// Update Replicas
-		String[] passArray = response.split(":");
-		String pass = passArray[1];
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
-		String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
+		if (!response.equals("Your password is : Entry does not exist!")){
+			String[] passArray = response.split(": ");
+			String pass = passArray[1];
+			ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
+			String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
+		}
 
 		System.out.println(response);
 		return response;

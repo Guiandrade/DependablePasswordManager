@@ -145,6 +145,14 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
+
+					for (Map.Entry<String,ConcurrentHashMap<Combination,String>> entry : tripletMap.entrySet()) {
+    					for (Map.Entry<Combination,String> entry1 : entry.getValue().entrySet()) {
+    						System.out.println("Domain = " + entry1.getKey().getDomain().substring(0,7));
+    						System.out.println("Username = " + entry1.getKey().getUsername().substring(0,7));
+    						System.out.println("Timestamp = " + entry1.getKey().getTimeStamp());
+    					}
+					}
 				}
 
 				else {
@@ -177,7 +185,15 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			Combination combination = new Combination (domain,username,timestamp);
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
-				if (updatePassword(combination, domainsMap, password)){
+				String updated = updatePassword(combination, domainsMap, password);
+				System.out.println(updated);
+				if (updated.equals("Done")){
+					logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully updated on server!\n");
+					return "Combination successfully saved on server!";
+				}
+				else if (updated.equals("Add")){
+					domainsMap.put(combination,password);
+					tripletMap.put(key,domainsMap);
 					logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully updated on server!\n");
 					return "Combination successfully saved on server!";
 				}
@@ -300,15 +316,20 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return null;
 	}
 
-	public boolean updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
+	public String updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
 		for(Combination combinationSaved : userMap.keySet()){
-			if (c.equalsTo(combinationSaved) && (c.getTimeStamp() > combinationSaved.getTimeStamp())){
-				userMap.remove(combinationSaved);
-				userMap.put(c,pass);
-				return true;
+			if (c.equalsTo(combinationSaved)){
+				if (c.getTimeStamp() > combinationSaved.getTimeStamp()){
+					userMap.remove(combinationSaved);
+					userMap.put(c,pass);
+					return "Done";
+				}
+				else{
+					return "Ignore";
+				}
 			}
 		}
-		return false;
+		return "Add";
 	}
 
 	public String generateSecretKey() throws NoSuchAlgorithmException{
