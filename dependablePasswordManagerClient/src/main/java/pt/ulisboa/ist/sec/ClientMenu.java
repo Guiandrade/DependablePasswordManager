@@ -69,13 +69,13 @@ public class ClientMenu {
 
 		// Request
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
+		final int timestamp = mapServersMessages.values().iterator().next();
 		String response = getClient().processRetrieveRequest(domain,username,mapServersMessages);
 
 		// Update Replicas
 		String[] passArray = response.split(":");
 		String pass = passArray[1];
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getActualizedServers(domain,username);
-		final int timestamp = mapServersMessages2.values().iterator().next();
+		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
 		String response2 = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages2);
 
 		System.out.println(response);
@@ -96,11 +96,10 @@ public class ClientMenu {
 		String response = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages);
 
 		// Update Replicas
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getActualizedServers(domain,username);
-		final int timestamp2 = mapServersMessages2.values().iterator().next();
-		String response2 = getClient().processSaveRequest(domain,username,pass,timestamp2,mapServersMessages2);
+		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
+		String response2 = getClient().processSaveRequest(domain,username,pass,timestamp,mapServersMessages2);
 
-		System.out.println(response2);
+		System.out.println(response);
 	}
 
 	public void registerUser() throws InterruptedException,SignatureException,RemoteException, IOException,NoSuchAlgorithmException,InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException,KeyStoreException, CertificateException, KeyStoreException,UnrecoverableKeyException  {

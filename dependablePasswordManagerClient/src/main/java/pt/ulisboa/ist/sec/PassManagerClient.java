@@ -495,4 +495,8 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			String finalValue=mapResponses.values().iterator().next();
 			return finalValue;
 			}
+
+			public ConcurrentHashMap<PassManagerInterface,Integer> getServers() {
+					return serversNums;
+			}
 }
