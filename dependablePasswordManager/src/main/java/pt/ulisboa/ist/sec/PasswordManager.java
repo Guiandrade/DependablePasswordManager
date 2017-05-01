@@ -302,7 +302,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public boolean updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
 		for(Combination combinationSaved : userMap.keySet()){
 			if (c.equalsTo(combinationSaved) && c.getTimeStamp() > combinationSaved.getTimeStamp()){
-				userMap.put(combinationSaved,pass);
+				userMap.put(c,pass);
 				return true;
 			}
 		}

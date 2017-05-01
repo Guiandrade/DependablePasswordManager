@@ -67,10 +67,15 @@ public class ClientMenu {
 		System.out.println("Please insert an username : ");
 		String username =  input.nextLine();
 
+		// Request
 		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
 		String response = getClient().processRetrieveRequest(domain,username,mapServersMessages);
 
-		System.out.println(response);
+		// Update Replicas
+		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getActualizedServers(domain,username);
+		String response2 = getClient().processRetrieveRequest(domain,username,mapServersMessages2);
+
+		System.out.println(response2);
 		return response;
 
 	}

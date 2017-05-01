@@ -28,9 +28,8 @@ public class PassManagerClient{
 	private PassManagerInterface passManagerInt;
 	private PublicKey pubKey;
 	private PublicKey serverKey;
-	private int seqNum;
 	private int id;
-	private ArrayList<PassManagerInterface> servers = new ArrayList<PassManagerInterface>();
+	private ConcurrentHashMap<PassManagerInterface,Integer> serversNums = new ConcurrentHashMap<PassManagerInterface,Integer>();
 	private ConcurrentHashMap<PassManagerInterface,SecretKey> serversList = new ConcurrentHashMap<PassManagerInterface,SecretKey>();
 	private static String publicKeyPath = "../keyStore/security/publicKeys/publickey";
 	private static String keyStorePath = "../keyStore/security/keyStore/keystore.jce";
@@ -56,7 +55,7 @@ public class PassManagerClient{
 				passManagerInt = (PassManagerInterface) Naming.lookup(serverURL);
 				String response = passManagerInt.startCommunication();
 				System.out.println("Response from Server: "+response);
-				servers.add(passManagerInt);
+				serversNums.put(passManagerInt,0);
 			}
 		}
 		catch(Exception e) {
@@ -134,9 +133,11 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String responseSignature = parts[2];
 		String mac = parts[3];
 		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
+		int seqNum =  serversNums.get(server);
 		if(RSAMethods.verifyMAC(serversList.get(server), mac, msgReceived)) {
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
+					serversNums.put(server,seqNum+1);
 					byte[] timestampByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 					int timestamp= Integer.parseInt(new String(timestampByte, "UTF-8"));
 					System.out.println("TimeStamp for the pair on server is : "+ timestamp);
@@ -168,6 +169,8 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String mac = parts[3];
 		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		SecretKey secretKey;
+		int seqNum =  serversNums.get(inter);
+
 		if(test==true) {
 			secretKey = sk;
 		}
@@ -178,6 +181,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
 					seqNum = seqNum + 1;
+					serversNums.put(inter,seqNum);
 					byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 					String password = new String(passwordByte, "UTF-8");
 					return "Your password is : "+password;
@@ -205,6 +209,8 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String mac = parts[3];
 		String msgRecieved = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		SecretKey secretKey;
+		int seqNum =  serversNums.get(inter);
+
 		if(test==true) {
 			secretKey = sk;
 		}
@@ -218,8 +224,12 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 				if(responseString.equals("Error") || responseString.equals("Password Saved")) {
 					if(seqNum +1 == Integer.parseInt(responseSeqNum)) {
 						if(test==true) {
-							seqNum+=1;
+							// Tiago acho que é isto que queres aqui mas verifica
+							// seqNum = seqNum + 1;
+							// serversNums.put(inter,seqNum);
 						}
+						seqNum = seqNum + 1;
+						serversNums.put(inter,seqNum);
 						return responseString;
 					}
 					else {
@@ -252,6 +262,9 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		String send_timestamp = byteToString(c_timestamp);
 		String message = "";
 
+		int seqNum =  serversNums.get(inter);
+
+
 		if((!pass.equals(""))&&(!timestamp.equals(""))) {
 			// For GetTimestamps or receivePassword messages
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
@@ -275,7 +288,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		final CountDownLatch latch = new CountDownLatch ( numServers/2 +1);
 		// let's send the request to all servers and wait for the response of the majority
 
-		for (PassManagerInterface  server : servers){
+		for (PassManagerInterface  server : serversNums.keySet()){
 			final PassManagerInterface serverInt = server;
 			Thread t = new Thread(new Runnable(){
 				@Override
@@ -337,7 +350,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			if(sig.equals(signature)) {
 				byte [] keyByte = RSAMethods.decipher(cipheredNounce,getPrivateKey());
 				String seqNumStr = new String(keyByte,"UTF-8");
-				seqNum = 0;
+				serversNums.put(server,0);
 				if (seqNumStr.equals("login")){
 						//System.out.println("User Logged In Successfuly!");
 
@@ -363,7 +376,7 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 		final CountDownLatch latch = new CountDownLatch(numServers/2 +1);
 		final ConcurrentHashMap<PassManagerInterface,Integer> map = new ConcurrentHashMap<PassManagerInterface,Integer>();
 
-		for (PassManagerInterface  server : servers){
+		for (PassManagerInterface  server : serversNums.keySet()){
 			final PassManagerInterface serverInt = server;
 			final String message = messageToSend(domain, username, "", "", serverInt);
 
@@ -394,7 +407,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			e.printStackTrace();
 		}
 		// filter to have only servers with highest timestamp
-		seqNum+=1;
 		int maxTimeStamp=0;
 		for (PassManagerInterface server : map.keySet()){
 				int value = map.get(server);
@@ -442,7 +454,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			}catch(InterruptedException e){
 				e.printStackTrace();
 			}
-			seqNum+=1;
 			String finalValue=map.values().iterator().next();
 			return finalValue;
 			}
@@ -481,7 +492,6 @@ public int checkRetrievedTimestamp(String response, String message, PassManagerI
 			}catch(InterruptedException e){
 				e.printStackTrace();
 			}
-			seqNum+=1;
 			String finalValue=mapResponses.values().iterator().next();
 			return finalValue;
 			}
