@@ -10,6 +10,7 @@ import java.security.spec.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.*;
 import javax.crypto.*;
@@ -132,6 +133,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
 				byte[] timestampByte = RSAMethods.decipher(timestamp, getPrivateKey());
 				String timestampFinal = new String(timestampByte, "UTF-8");
+				System.out.println(timestampFinal);
 
 				if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
 
@@ -182,10 +184,9 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			}
 			else{
 				domainsMap = new ConcurrentHashMap<Combination,String>();
+				domainsMap.put(combination,password);
+				tripletMap.put(key,domainsMap);
 			}
-
-			domainsMap.put(combination,password);
-			tripletMap.put(key,domainsMap);
 
 			logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully saved on server!\n");
 			return "Combination successfully saved on server!";
@@ -301,7 +302,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 	public boolean updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
 		for(Combination combinationSaved : userMap.keySet()){
-			if (c.equalsTo(combinationSaved) && c.getTimeStamp() > combinationSaved.getTimeStamp()){
+			if (c.equalsTo(combinationSaved) && (c.getTimeStamp() > combinationSaved.getTimeStamp())){
+				userMap.remove(combinationSaved);
 				userMap.put(c,pass);
 				return true;
 			}
