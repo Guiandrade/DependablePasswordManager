@@ -61,20 +61,28 @@ public class ServerTest {
 	@Test
 	public void registerUserTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server
 		PasswordManager pm = new PasswordManager(8080);
+
+		// Normal register
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 
+		// Analyse the correctness of the answer
 		Assert.assertNotSame(response, "Error: Could not validate signature.");
 	}
 	
 	@Test
 	public void registerUserFailingTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
 		
+		// Creation of the server
 		PasswordManager pm = new PasswordManager(8080);
+
+		// Register with a malformed message
 		String response = pm.registerUser(DatatypeConverter.printBase64Binary(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),servPrivKey));
 		
+		// Analyse the correctness of the answer
 		Assert.assertEquals(response, "Error-Error-Error-Error-Error");
 	}
 	
@@ -88,7 +96,7 @@ public class ServerTest {
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
-		// Set global variables for Secret Key and Server Public Key that will be used in following tests
+		// Set global variables for Secret Key and Server Public Key that based on the register
 		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
 		String secretKeyStr = new String(secretKeyByte, "UTF-8");
 		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
@@ -117,6 +125,12 @@ public class ServerTest {
 		PasswordManager pm = new PasswordManager(8080);
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the request from client
 		String domain = "facebook";
@@ -129,8 +143,12 @@ public class ServerTest {
 		String saveResponse = pm.savePassword(msg);
 
 		// Check the confientiality of the answer
-		String cipheredResponse = byteToString(RSAMethods.cipher("Password Saved",cliPubKey));
-		Assert.assertEquals(cipheredResponse, saveResponse.split("-")[0]);
+		Assert.assertNotSame("Passowrd Saved", saveResponse.split("-")[0]);
+
+		// Analyse yet the correctness of the answer
+		byte[] responseTest = RSAMethods.decipher(saveResponse.split("-")[0],cliPrivKey);
+		String responseTestStr = new String(responseTest, "UTF-8");
+		Assert.assertEquals("Password Saved", responseTestStr);
 	}
 	
 	@Test
@@ -138,8 +156,14 @@ public class ServerTest {
 		
 		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the request from client
 		String domain = "facebook";
@@ -148,7 +172,7 @@ public class ServerTest {
 		int seqNum = 0;
 		String msg = messageToSend(domain,username,password,"0",seqNum);
 		
-		//Simulate a Man-In-The-Middle attack by changing the content of message
+		// Simulate a Man-In-The-Middle attack by changing the content of message
 		StringBuilder newMsg = new StringBuilder(msg);
 		newMsg.insert(4, "a");
 		
@@ -164,8 +188,14 @@ public class ServerTest {
 		
 		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the request from client
 		String domain = "facebook";
@@ -178,11 +208,10 @@ public class ServerTest {
 		pm.savePassword(msg);
 		String saveResponse2 = pm.savePassword(msg.toString()); // Replay attack by sending msg twice
 		
-		//byte[] responseTest = RSAMethods.decipher(saveResponse2.split("-")[0],cliPrivKey);
-		//String responseTestStr = new String(responseTest, "UTF-8");
-		
 		// Check the way server deals with freshness of messages
-		Assert.assertEquals("Error", saveResponse2.split("-")[0]);
+		byte[] responseTest = RSAMethods.decipher(saveResponse2.split("-")[0],cliPrivKey);
+		String responseTestStr = new String(responseTest, "UTF-8");
+		Assert.assertEquals("Error", responseTestStr);
 	}
 	
 	// RETRIEVE PASSWORD TESTS
@@ -195,7 +224,7 @@ public class ServerTest {
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()),
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
 		
-		// Set global variables for Secret Key and Server Public Key that will be used in following tests
+		// Set global variables for Secret Key and Server Public Key based on the register
 		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
 		String secretKeyStr = new String(secretKeyByte, "UTF-8");
 		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
@@ -231,6 +260,12 @@ public class ServerTest {
 		PasswordManager pm = new PasswordManager(8080);
 		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()),
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the save request from client
 		String domain = "facebook";
@@ -250,8 +285,12 @@ public class ServerTest {
 		String retrieveResponse = pm.retrievePassword(msg);
 		
 		// Check the confientiality of the answer
-		String cipheredResponse = byteToString(RSAMethods.cipher(password,cliPubKey));
-		Assert.assertEquals(cipheredResponse, retrieveResponse.split("-")[0]);
+		Assert.assertNotSame(password, retrieveResponse.split("-")[0]);
+
+		// Analyse the correctness of the answer
+		byte[] responseTest = RSAMethods.decipher(retrieveResponse.split("-")[0],cliPrivKey);
+		String responseTestStr = new String(responseTest, "UTF-8");
+		Assert.assertEquals(password, responseTestStr);
 	}
 	
 	@Test
@@ -259,8 +298,14 @@ public class ServerTest {
 		
 		// Creation of the server and registration
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the save request from client
 		String domain = "facebook";
@@ -292,8 +337,14 @@ public class ServerTest {
 		
 		// Simulate the save request from client
 		PasswordManager pm = new PasswordManager(8080);
-		pm.registerUser(byteToString(cliPubKey.getEncoded()), 
+		String responseRegister = pm.registerUser(byteToString(cliPubKey.getEncoded()), 
 				DigitalSignature.getSignature(cliPubKey.getEncoded(),cliPrivKey));
+
+		// Set global variables for Secret Key and Server Public Key based on the register
+		byte[] secretKeyByte = RSAMethods.decipher(responseRegister.split("-")[2], cliPrivKey);
+		String secretKeyStr = new String(secretKeyByte, "UTF-8");
+		secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
+		servPubKey = getServerPublicKey(responseRegister.split("-")[0]);
 		
 		// Simulate the save request from client
 		String domain = "facebook";
@@ -313,16 +364,11 @@ public class ServerTest {
 		pm.retrievePassword(msg);
 		String retrieveResponse2 = pm.retrievePassword(msg);
 		
-		//byte[] responseTest = RSAMethods.decipher(retrieveResponse2.split("-")[0],cliPrivKey);
-		//String responseTestStr = new String(responseTest, "UTF-8");
-		
 		// Check the way server deals with freshness of messages
-		Assert.assertEquals("Error", retrieveResponse2.split("-")[0]);
+		byte[] responseTest = RSAMethods.decipher(retrieveResponse2.split("-")[0],cliPrivKey);
+		String responseTestStr = new String(responseTest, "UTF-8");
+		Assert.assertEquals("Error", responseTestStr);
 	}
-	
-	///////////////////////// REPLICATION TESTS /////////////////////////
-	
-	//to do
 	
 	///////////////////////// SUPPORT METHODS /////////////////////////
 	
@@ -331,7 +377,7 @@ public class ServerTest {
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, cliPubKey);
 		byte[] c_username = RSAMethods.cipherPubKeyCliNoPadding(username, cliPubKey);
-		byte[] c_timestamp = RSAMethods.cipherPubKeyCliPadding(timestamp, cliPubKey);
+		byte[] c_timestamp = RSAMethods.cipherPubKeyCliPadding(timestamp, servPubKey);
 
 		String send_domain = byteToString(c_domain);
 		String send_username = byteToString(c_username);

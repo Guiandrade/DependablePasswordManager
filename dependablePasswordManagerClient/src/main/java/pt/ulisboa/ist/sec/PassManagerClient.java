@@ -159,7 +159,7 @@ public class PassManagerClient{
 		}
 	}
 
-	public String checkRetrievedPassword(String response, String message,PassManagerInterface inter, boolean test, SecretKey sk) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public String checkRetrievedPassword(String response, String message,PassManagerInterface inter, boolean test, SecretKey sk, int seqNumber) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
 		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + msg[4];
@@ -169,19 +169,23 @@ public class PassManagerClient{
 		String mac = parts[3];
 		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		SecretKey secretKey;
-		int seqNum =  serversNums.get(inter);
+		int seqNum;
 
 		if(test==true) {
 			secretKey = sk;
+			seqNum = seqNumber;
 		}
 		else {
 			secretKey = serversList.get(inter);
+			seqNum = serversNums.get(inter);
 		}
 		if(RSAMethods.verifyMAC(secretKey, mac, msgReceived)) {
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
 					seqNum = seqNum + 1;
-					serversNums.put(inter,seqNum);
+					if(test==false) {
+						serversNums.put(inter,seqNum);
+					}
 					byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
 					String password = new String(passwordByte, "UTF-8");
 					return "Your password is : "+password;
@@ -199,7 +203,7 @@ public class PassManagerClient{
 		}
 	}
 
-	public synchronized String checkSavedPassword(String response,String message,PassManagerInterface inter, boolean test, SecretKey sk) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized String checkSavedPassword(String response,String message,PassManagerInterface inter, boolean test, SecretKey sk, int seqNumber) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
 		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + "-" + msg[4] + "-" + msg[5] + "-" + msg[6];
@@ -209,13 +213,15 @@ public class PassManagerClient{
 		String mac = parts[3];
 		String msgRecieved = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
 		SecretKey secretKey;
-		int seqNum =  serversNums.get(inter);
+		int seqNum;
 
 		if(test==true) {
 			secretKey = sk;
+			seqNum = seqNumber;
 		}
 		else {
 			secretKey = serversList.get(inter);
+			seqNum = serversNums.get(inter);
 		}
 		if(RSAMethods.verifyMAC(secretKey, mac, msgRecieved)) {
 			byte[] responseByte = RSAMethods.decipher(responseMessage, getPrivateKey());
@@ -223,13 +229,10 @@ public class PassManagerClient{
 			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
 				if(responseString.equals("Error") || responseString.equals("Password Saved")) {
 					if(seqNum +1 == Integer.parseInt(responseSeqNum)) {
-						if(test==true) {
-							// Tiago acho que é isto que queres aqui mas verifica
-							// seqNum = seqNum + 1;
-							// serversNums.put(inter,seqNum);
-						}
 						seqNum = seqNum + 1;
-						serversNums.put(inter,seqNum);
+						if(test==false) {
+							serversNums.put(inter,seqNum);
+						}
 						return responseString;
 					}
 					else {
@@ -350,13 +353,8 @@ public class PassManagerClient{
 			if(sig.equals(signature)) {
 				byte [] keyByte = RSAMethods.decipher(cipheredNounce,getPrivateKey());
 				String seqNumStr = new String(keyByte,"UTF-8");
-				serversNums.put(server,0);
-				if (seqNumStr.equals("login")){
-					//System.out.println("User Logged In Successfuly!");
-
-				}
-				else{
-					//System.out.println("User Registered Successfuly!");
+				if(test==false){
+					serversNums.put(server,0);
 				}
 				return true;
 			}
@@ -443,11 +441,11 @@ public class PassManagerClient{
 						String finalResponse;
 						if (typeRequest.equals("save")){
 							response = serverInt.savePassword(message);
-							finalResponse = checkSavedPassword(response,message,serverInt,false,null);
+							finalResponse = checkSavedPassword(response,message,serverInt,false,null,0);
 						}
 						else{
 							response = serverInt.retrievePassword(message);
-							finalResponse = checkRetrievedPassword(response,message,serverInt,false,null);
+							finalResponse = checkRetrievedPassword(response,message,serverInt,false,null,0);
 						}
 						mapResponses.put(serverInt,finalResponse);
 					}catch(RemoteException e){

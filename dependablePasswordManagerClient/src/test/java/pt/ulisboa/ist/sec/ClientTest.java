@@ -66,29 +66,41 @@ public class ClientTest {
 	
 	@Test
 	public void registerUserTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the client
 		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Simulation of the response message from server to the register request from client
 		String messageRecievedByServer = "publicKey";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
+
+		// Call the processRegisterResponse on client
 		boolean response = client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		
+		// Analyse the correctness of the answer
 		Assert.assertEquals(true, response);
 	}
 	
 	@Test
 	public void registerUserFailingTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the client
 		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Simulation of the response message from server to the register request from client
 		String messageRecievedByServer = "publicKey";
 		String msgRecieved = messageToSend("Register");
 		
+		// Tampering the message
 		StringBuilder newMsg = new StringBuilder(msgRecieved);
 		newMsg.insert(4, "xasd");
-		
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer+""),cliPrivKey);
+
+		// Call the processRegisterResponse method on client
 		boolean response = client.processRegisterResponse(newMsg.toString(), signature,null,true,secretKey);
 		
+		// Analyse the correctness of the answer
 		Assert.assertEquals(false, response);
 		
 	}
@@ -97,115 +109,141 @@ public class ClientTest {
 	
 	@Test
 	public void savePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
-		
+
+		// Simulation of the response message from server to the save request from client
 		msgRecieved = messageToSend("Save");
-		String response = client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
+
+		// Call the checkSavedPassword method on client
+		String response = client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey,0);
 		
+		// Analyse the correctness of the answer
 		Assert.assertEquals("Password Saved",response);
 	}
 	
 	@Test
 	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
 		
+		// Simulation of the response message from server to the save request from client
 		msgRecieved = messageToSend("Save");
 
+		// Simulate a Man-In-The-Middle attack by changing the content of message
 		StringBuilder newMsg = new StringBuilder(msgRecieved);
 		newMsg.insert(4, "xasd");
 
-		String response = client.checkSavedPassword(newMsg.toString(), messageRecievedByServer, null, true, secretKey);
+		// Call the checkSavedPassword method on client
+		String response = client.checkSavedPassword(newMsg.toString(), messageRecievedByServer, null, true, secretKey, 0);
 		
+		// Check the integrity of the client
 		Assert.assertEquals("Error",response);
 	}
 	
 	@Test
 	public void savePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
 		
+		// Simulation of the response message from server to the save request from client
 		msgRecieved = messageToSend("Save");
-		client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
-		String response = client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
+
+		// Simulate a Replay Attack by calling checkSavedPassword method twice
+		client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 0);
+		String response = client.checkSavedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 1);
 		
-		Assert.assertEquals("Error: seqNumber not right",response);
+		// Check the way client deals with freshness of messages
+		Assert.assertEquals("Error: Could not validate seqNum",response);
 	}
 	
 	// RETRIEVE PASSWORD TESTS
 	
 	@Test
 	public void retrievePasswordTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
 		
+		// Simulation of the response message from server to the retrieve request from client
 		msgRecieved = messageToSend("Retrieve");
-		String response = client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
+
+		// Call the checkRetrievedPassword method on client
+		String response = client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 0);
 		
+		// Analyse the correctness of the answer
 		Assert.assertEquals("Your password is : test",response);
 	}
 	
 	@Test
 	public void retrievePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
 		
+		// Simulation of the response message from server to the retrieve request from client
 		msgRecieved = messageToSend("Retrieve");
 
+		// Simulate a Man-In-The-Middle attack by changing the content of message
 		StringBuilder newMsg = new StringBuilder(msgRecieved);
 		newMsg.insert(4, "xasd");
 
-		String response = client.checkRetrievedPassword(newMsg.toString(), messageRecievedByServer, null, true, secretKey);
+		// Call the checkRetrievedPassword method on client
+		String response = client.checkRetrievedPassword(newMsg.toString(), messageRecievedByServer, null, true, secretKey, 0);
 		
+		// Check the integrity of the client
 		Assert.assertEquals("Error",response);
 	}
 	
 	@Test
 	public void retrievePasswordReplayAttackTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
-		PassManagerClient client = new PassManagerClient(1,"sec");
 		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
 		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4";
 		String msgRecieved = messageToSend("Register");
 		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
 		client.setPublicKey();
 		
+		// Simulation of the response message from server to the retrieve request from client
 		msgRecieved = messageToSend("Retrieve");
-		client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
-		String response = client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey);
+
+		// Simulate a Replay Attack by calling checkRetrievedPassword method twice
+		client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 0);
+		String response = client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 1);
 		
+		// Check the way client deals with freshness of messages
 		Assert.assertEquals("Error",response);
 	}
-	
-	///////////////////////// REPLICATION TESTS /////////////////////////
-	
-	//to do
 	
 	///////////////////////// SUPPORT METHODS /////////////////////////
 	
