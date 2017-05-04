@@ -67,20 +67,20 @@ public class ClientMenu {
 		System.out.println("Please insert an username : ");
 		String username =  input.nextLine();
 
-		// Request
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
-		final int timestamp = mapServersMessages.values().iterator().next();
-		String response = getClient().processRequest(domain,username,"",-1,mapServersMessages,"retrieve");
+		// Read Phase
+		String response = getClient().processRequest(domain,username,"",-1,"retrieve");
 
 		// Update Replicas
-		if (!response.equals("Your password is : Entry does not exist!")){
-			String[] passArray = response.split(": ");
-			String pass = passArray[1];
-			ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
-			String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
+		String[] passArray = response.split(" : ");
+		String pass = passArray[0];
+		int timestamp = Integer.parseInt(passArray[1]);
+		System.out.println("The highest timestamp on servers for that file is : "+timestamp);
+		
+		if (!pass.equals("Entry does not exist!")){
+			String response2 = getClient().processRequest(domain,username,pass,timestamp,"writeback");
 		}
 
-		System.out.println(response);
+		System.out.println("Your password is: "+pass);
 		return response;
 
 	}
@@ -93,13 +93,14 @@ public class ClientMenu {
 		System.out.println("Please insert the password: ");
 		String pass =  input.nextLine();
 
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages = getClient().getActualizedServers(domain,username);
-		final int timestamp = mapServersMessages.values().iterator().next();
-		String response = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages,"save");
+		// Read Phase
+		String response = getClient().processRequest(domain,username,"",-1,"retrieve");
 
-		// Update Replicas
-		ConcurrentHashMap<PassManagerInterface,Integer>  mapServersMessages2 = getClient().getServers();
-		String response2 = getClient().processRequest(domain,username,pass,timestamp,mapServersMessages2,"save");
+		// Write Phase
+		String[] passArray = response.split(" : ");
+		int timestamp = Integer.parseInt(passArray[1]);
+		System.out.println("The highest timestamp on servers for that file is : "+timestamp);
+		String response2 = getClient().processRequest(domain,username,pass,timestamp,"save");
 
 		System.out.println(response2);
 	}

@@ -124,50 +124,16 @@ public class PassManagerClient{
 		return privateKey;
 	}
 
-	public int checkRetrievedTimestamp(String response, String message, PassManagerInterface server) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
-		String[] parts = response.split("-");
-		String[] msg = message.split("-");
-		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + msg[4];
-		String responseMessage = parts[0];
-		String responseSeqNum = parts[1];
-		String responseSignature = parts[2];
-		String mac = parts[3];
-		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
-		int seqNum =  serversNums.get(server);
-		if(RSAMethods.verifyMAC(serversList.get(server), mac, msgReceived)) {
-			if(DigitalSignature.verifySignature(getPublicKey().getEncoded(), stringToByte(responseSignature), stringToByte(msgSent))) {
-				if(seqNum+1 ==Integer.parseInt(responseSeqNum)) {
-					serversNums.put(server,seqNum+1);
-					byte[] timestampByte = RSAMethods.decipher(responseMessage, getPrivateKey());
-					int timestamp= Integer.parseInt(new String(timestampByte, "UTF-8"));
-					System.out.println("TimeStamp for the pair on server is : "+ timestamp);
-					return timestamp;
-				}
-				else {
-					System.out.println("Error : Could not validate seqNum");
-					return -1;
-				}
-			}
-			else {
-				System.out.println("Error");
-				return -1;
-			}
-		}
-		else {
-			System.out.println("Error");
-			return -1;
-		}
-	}
-
 	public String checkRetrievedPassword(String response, String message,PassManagerInterface inter, boolean test, SecretKey sk, int seqNumber) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, NumberFormatException, SignatureException,KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String[] parts = response.split("-");
 		String[] msg = message.split("-");
-		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + msg[4];
+		String msgSent = msg[0] + "-" + msg[1] + "-" + msg[2] + "-" + msg[3] + "-" + msg[4];
 		String responseMessage = parts[0];
 		String responseSeqNum = parts[1];
-		String responseSignature = parts[2];
-		String mac = parts[3];
-		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + responseSignature;
+		String timestamp = parts[2];
+		String responseSignature = parts[3];
+		String mac = parts[4];
+		String msgReceived = responseMessage + "-" + responseSeqNum + "-" + timestamp + "-" + responseSignature;
 		SecretKey secretKey;
 		int seqNum;
 
@@ -187,8 +153,10 @@ public class PassManagerClient{
 						serversNums.put(inter,seqNum);
 					}
 					byte[] passwordByte = RSAMethods.decipher(responseMessage, getPrivateKey());
-					String password = new String(passwordByte, "UTF-8");
-					return "Your password is : "+password;
+					String passwordStr = new String(passwordByte, "UTF-8");
+					byte[] timestampByte = RSAMethods.decipher(timestamp, getPrivateKey());
+					String timestampStr = new String(timestampByte, "UTF-8");
+					return passwordStr + " : " + timestampStr;
 				}
 				else {
 					return "Error";
@@ -284,11 +252,13 @@ public class PassManagerClient{
 	}
 
 	public String registerUser(String key, String signature) throws RemoteException,InterruptedException {
-		final int numServers = serversList.size();
+		final int numServers = serversNums.size();
 		final ConcurrentHashMap<PassManagerInterface,String> map = new ConcurrentHashMap<PassManagerInterface,String>();
 		final String publicKey = key;
 		final String sig = signature;
-		final CountDownLatch latch = new CountDownLatch ( numServers/2 +1);
+		final int f = (numServers - 1) / 3;
+		final CountDownLatch latch = new CountDownLatch(2*f+1);
+
 		// let's send the request to all servers and wait for the response of the majority
 
 		for (PassManagerInterface  server : serversNums.keySet()){
@@ -313,7 +283,7 @@ public class PassManagerClient{
 						// byzantine
 					}finally{
 						latch.countDown();
-					}
+				}
 				}
 			});
 			t.start();
@@ -369,67 +339,15 @@ public class PassManagerClient{
 		}
 	}
 
-	public ConcurrentHashMap<PassManagerInterface,Integer> getActualizedServers(String domain, String username) throws InvalidKeyException,IllegalBlockSizeException,BadPaddingException,NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException{
-		int numServers = serversList.size();
-		final CountDownLatch latch = new CountDownLatch(numServers/2 +1);
-		final ConcurrentHashMap<PassManagerInterface,Integer> map = new ConcurrentHashMap<PassManagerInterface,Integer>();
+	public String processRequest(String domain,String username,String pass,int timestamp, String mode) throws InvalidKeyException,IllegalBlockSizeException,BadPaddingException,NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException{
 
-		for (PassManagerInterface  server : serversNums.keySet()){
-			final PassManagerInterface serverInt = server;
-			final String message = messageToSend(domain, username, "", "", serverInt);
-
-			Thread t = new Thread(new Runnable(){
-				@Override
-				public void run() {
-					try{
-						String responseTimeStamp = serverInt.retrieveTimestamp(message);
-						int timestamp = checkRetrievedTimestamp(responseTimeStamp,message,serverInt);
-						map.put(serverInt,timestamp);
-						return;
-					}catch(RemoteException e){
-						// no need to handle
-					}catch (Exception e) {
-						// byzantine
-					}finally{
-						latch.countDown();
-					}
-				}
-			});
-			t.start();
-
-		}
-		// wait for the majority of the replicas to reply
-		try{
-			latch.await();
-		}catch(InterruptedException e){
-			e.printStackTrace();
-		}
-		// filter to have only servers with highest timestamp
-		int maxTimeStamp=0;
-		for (PassManagerInterface server : map.keySet()){
-			int value = map.get(server);
-			if (value >= maxTimeStamp){
-				maxTimeStamp=value;
-			}
-			else{
-				map.remove(server);
-			}
-		}
-		return map;
-	}
-
-	public String processRequest(String domain,String username,String pass,int timestamp,ConcurrentHashMap<PassManagerInterface,Integer> map, String mode) throws InvalidKeyException,IllegalBlockSizeException,BadPaddingException,NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException{
-		final String newTimestamp;
-		if (timestamp != -1){
-			newTimestamp = Integer.toString(timestamp+1);
-		}
-		else{
-			newTimestamp = "";
-		}
-		int numServers = map.size();
-		final CountDownLatch latch = new CountDownLatch(numServers/2 +1);
+		final String newTimestamp = generateTimestamp(timestamp, mode);
+		final int numServers = serversNums.size();
+		final int f = (numServers - 1) / 3;
+		final CountDownLatch latch = new CountDownLatch(2*f+1);
 		final ConcurrentHashMap<PassManagerInterface,String> mapResponses = new ConcurrentHashMap<PassManagerInterface,String>();
-		for(PassManagerInterface server: map.keySet()){
+		final ConcurrentHashMap<Integer,String> mapReadResponses = new ConcurrentHashMap<Integer, String>();
+		for(PassManagerInterface server: serversNums.keySet()){
 			final PassManagerInterface serverInt = server;
 			final String message = messageToSend(domain, username, pass, newTimestamp, serverInt);
 			final String typeRequest = mode;
@@ -439,13 +357,16 @@ public class PassManagerClient{
 					try{
 						String response;
 						String finalResponse;
-						if (typeRequest.equals("save")){
+						if (!typeRequest.equals("retrieve")){
 							response = serverInt.savePassword(message);
 							finalResponse = checkSavedPassword(response,message,serverInt,false,null,0);
 						}
 						else{
 							response = serverInt.retrievePassword(message);
 							finalResponse = checkRetrievedPassword(response,message,serverInt,false,null,0);
+							String[] parts = finalResponse.split(" : ");
+							int timestamp = Integer.parseInt(parts[1]);
+							mapReadResponses.put(timestamp,parts[0]);
 						}
 						mapResponses.put(serverInt,finalResponse);
 					}catch(RemoteException e){
@@ -465,11 +386,38 @@ public class PassManagerClient{
 		}catch(InterruptedException e){
 			e.printStackTrace();
 		}
-		String finalValue=mapResponses.values().iterator().next();
+		String finalValue="";
+		if (!mode.equals("retrieve")){
+				finalValue=mapResponses.values().iterator().next();
+		}
+		else{
+			int maxTimestamp=0;
+			for(Integer ts : mapReadResponses.keySet()){
+				 if (ts > maxTimestamp){
+					 maxTimestamp = ts;
+				 }
+			}
+			finalValue = mapReadResponses.get(maxTimestamp)+" : "+maxTimestamp;
+		}
 		return finalValue;
 	}
 
 	public ConcurrentHashMap<PassManagerInterface,Integer> getServers() {
 		return serversNums;
+	}
+
+	public String generateTimestamp(int timestamp, String mode){
+		// criar método para as seguintes linhas
+		String newTimestamp;
+		if (timestamp != -1){
+			if (mode.equals("save")){
+				timestamp +=1;
+			}
+			newTimestamp = Integer.toString(timestamp);
+			return newTimestamp;
+		}
+		else{
+			return "";
+		}
 	}
 }

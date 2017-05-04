@@ -145,14 +145,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 					byte[] response = RSAMethods.cipher("Password Saved",RSAMethods.getClientPublicKey(key));
 					String responseStr = byteToString(response);
 					responseMsg = responseStr + "-" + requestNonce;
-
-					for (Map.Entry<String,ConcurrentHashMap<Combination,String>> entry : tripletMap.entrySet()) {
-    					for (Map.Entry<Combination,String> entry1 : entry.getValue().entrySet()) {
-    						System.out.println("Domain = " + entry1.getKey().getDomain().substring(0,7));
-    						System.out.println("Username = " + entry1.getKey().getUsername().substring(0,7));
-    						System.out.println("Timestamp = " + entry1.getKey().getTimeStamp());
-    					}
-					}
 				}
 
 				else {
@@ -280,8 +272,10 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				responseMsg = byteToString(response) + "-"+clientNonce;
 
 			}
-			String msgToSend = responseMsg + "-" + signature;
-
+			String actualTimestamp = getTimestamp(key,domain,username);
+			byte[] timestampByte = RSAMethods.cipher(actualTimestamp,RSAMethods.getClientPublicKey(key));
+			String timestampStr = byteToString(timestampByte);
+			String msgToSend = responseMsg + "-" + timestampStr + "-" + signature;
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
 
 			return msgToSend + "-" + mac;
@@ -319,7 +313,8 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public String updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
 		for(Combination combinationSaved : userMap.keySet()){
 			if (c.equalsTo(combinationSaved)){
-				if (c.getTimeStamp() > combinationSaved.getTimeStamp()){
+				// TIAGO -> trata aqui da condicao de desempate sff
+				if (c.getTimeStamp() >= combinationSaved.getTimeStamp()){
 					userMap.remove(combinationSaved);
 					userMap.put(c,pass);
 					return "Done";
@@ -377,66 +372,6 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 
 		return privateKey;
-	}
-
-	public String retrieveTimestamp(String message) throws InvalidKeyException, NumberFormatException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, IOException, SignatureException{
-
-				String[] parts = message.split("-");
-				String msg=parts[0] + "-" + parts[1] + "-" + parts[2] + "-" + parts[3] + "-" + parts[4];
-				String key = parts[0];
-				String seqNum = parts[1];
-				String secKey = parts[2];
-				String domain = parts[3];
-				String username = parts[4];
-				String signature = parts[5];
-				String clientNonce = "";
-				String requestNonce = "";
-				String responseMsg = "";
-				SecretKey secretKey = null;
-
-				try {
-					if(DigitalSignature.verifySignature(stringToByte(key), stringToByte(signature), stringToByte(msg))){
-						logger.info("Verified Digital Signature!\n");
-						byte[] secretKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
-						String secretKeyStr = new String(secretKeyByte, "UTF-8");
-						secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
-						ConcurrentHashMap<SecretKey,String> map = registeredUsers.get(key);
-						clientNonce = map.get(secretKey);
-						requestNonce = String.valueOf(Integer.parseInt(clientNonce)+1);
-						if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
-							logger.info("Nonce confirmed!\n");
-							String actualTimestamp = getTimestamp(key,domain,username);
-							ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
-							hash.put(secretKey,requestNonce);
-							getRegisteredUsers().put(key, hash);
-							byte[] response = RSAMethods.cipher(actualTimestamp,RSAMethods.getClientPublicKey(key));
-							String responseStr = byteToString(response);
-							responseMsg = responseStr + "-" + requestNonce;
-
-						}
-
-						else {
-							logger.info("Error: Nonce incorrect from savePassword request of user with key "+key+"\n");
-							byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-							String responseStr = byteToString(response);
-							responseMsg = responseStr + "-" + clientNonce;
-						}
-
-					}
-					else {
-						byte[] response = RSAMethods.cipher("Error",RSAMethods.getClientPublicKey(key));
-						String responseStr = byteToString(response);
-						responseMsg = responseStr + "-" + clientNonce;
-					}
-					String msgToSend = responseMsg + "-" + signature;
-
-					String mac = RSAMethods.generateMAC(secretKey, msgToSend);
-					return msgToSend + "-" + mac;
-				} catch (Exception e) {
-					e.printStackTrace();
-					logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
-					return "Error-Error-Error-Error";
-				}
 	}
 
 	public String getTimestamp(String key,String domain, String username){
