@@ -15,19 +15,8 @@ start rmiregistry
 
 To Run:
 
-1) Go to the project folder on the terminal and run the following command (creates 3 clients and 3 servers):
+1) Go to the project folder on the terminal and run the following command (creates 1 client and 4 servers):
       - sh autoSetup.sh
 
 2) Insert KeyStore spassword "sec" when prompted on each Server.      
 
-Instructions Stage 2:
-
-      Projecto:
-            - Em java (ou shell ou outra coisa qualquer) fazer um script para lançar os N servidores:
-            - (1,N)  --> 1 escritor, N leitores(server)
-
-Nota : Pode-se se saltar o step 1 do enunciado da parte 2
-
-      Relatório:
-            - Estender e explicar demos/testes (mostrar que está bom contra ameaças)
-            - Referencia para cada teste(quando falamos de uma ameaça, apontamos para o teste que demonstra que está protegido)
