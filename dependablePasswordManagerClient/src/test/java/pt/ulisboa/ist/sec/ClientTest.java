@@ -127,6 +127,29 @@ public class ClientTest {
 		// Analyse the correctness of the answer
 		Assert.assertEquals("Password Saved",response);
 	}
+
+	@Test
+	public void savePasswordConfidentialityTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
+		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
+		String msgRecieved = messageToSend("Register");
+		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
+		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
+		client.setPublicKey();
+
+		String msgToSend = client.messageToSend("domain", "username", "pass", "0", null, true);
+		
+		// Analyse the correctness of the answer
+		Assert.assertNotSame("domain",msgToSend.split("-")[3]);
+		Assert.assertNotSame("username",msgToSend.split("-")[4]);
+		Assert.assertNotSame("pass",msgToSend.split("-")[5]);
+
+		byte[] passByte = RSAMethods.decipher(msgToSend.split("-")[5],cliPrivKey);
+		String passStr = new String(passByte, "UTF-8");
+		Assert.assertEquals("pass",passStr);
+	}
 	
 	@Test
 	public void savePasswordManInTheMiddleTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
@@ -195,7 +218,25 @@ public class ClientTest {
 		String response = client.checkRetrievedPassword(msgRecieved, messageRecievedByServer, null, true, secretKey, 0);
 		
 		// Analyse the correctness of the answer
-		Assert.assertEquals("Your password is : test",response);
+		Assert.assertEquals("test : test",response);
+	}
+
+	@Test
+	public void retrievePasswordConfidentialityTest() throws RemoteException, NoSuchAlgorithmException, InvalidKeySpecException, IOException, InvalidKeyException, SignatureException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, UnrecoverableKeyException, KeyStoreException, CertificateException {
+		
+		// Creation of the client and dealing with registration process
+		PassManagerClient client = new PassManagerClient(1,"sec");
+		String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
+		String msgRecieved = messageToSend("Register");
+		String signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
+		client.processRegisterResponse(msgRecieved, signature,null,true,secretKey);
+		client.setPublicKey();
+
+		String msgToSend = client.messageToSend("domain", "username", "", "0", null, true);
+		
+		// Analyse the correctness of the answer
+		Assert.assertNotSame("domain",msgToSend.split("-")[3]);
+		Assert.assertNotSame("username",msgToSend.split("-")[4]);
 	}
 	
 	@Test
@@ -255,7 +296,7 @@ public class ClientTest {
 		String message = "";
 		String signature = "";
 		
-		byte[] c_timestamp = RSAMethods.cipherPubKeyCliNoPadding(timestamp, cliPubKey);
+		byte[] c_timestamp = RSAMethods.cipherPubKeyCliPadding(timestamp, cliPubKey);
 		byte[] c_password = RSAMethods.cipherPubKeyCliPadding(password, cliPubKey);
 		byte[] c_secretKey = RSAMethods.cipherPubKeyCliPadding(byteToString(secretKey.getEncoded()), cliPubKey);
 		
@@ -277,20 +318,22 @@ public class ClientTest {
 		else {
 			String seqNum = "1";
 			String responseStr = "";
+			String msg = "";
 			if(type.equals("Save")) {
 				String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4-arg5-arg6";
 				signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 				String response = "Password Saved";
 				byte[] responseByte = RSAMethods.cipherPubKeyCliPadding(response,cliPubKey);
 				responseStr = byteToString(responseByte);
+				msg = responseStr + "-" + seqNum + "-" + signature;
 				
 			}
 			else if(type.equals("Retrieve")) {
 				String messageRecievedByServer = "arg0-arg1-arg2-arg3-arg4";
 				signature = DigitalSignature.getSignature(stringToByte(messageRecievedByServer),cliPrivKey);
 				responseStr = sendPassword;
+				msg = responseStr + "-" + seqNum + "-" + sendTimestamp + "-" + signature;
 			}
-			String msg = responseStr + "-" + seqNum + "-" + signature;
 			String mac = RSAMethods.generateMAC(secretKey, msg);
 			message = msg + "-" + mac;
 			return message;

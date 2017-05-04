@@ -221,7 +221,7 @@ public class PassManagerClient{
 
 	}
 
-	public synchronized String messageToSend(String domain, String username, String pass, String timestamp, PassManagerInterface inter) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
+	public synchronized String messageToSend(String domain, String username, String pass, String timestamp, PassManagerInterface inter, boolean test) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, SignatureException, IOException, KeyStoreException, UnrecoverableKeyException, CertificateException {
 		String publicKey = byteToString(getPublicKey().getEncoded());
 
 		byte[] c_domain = RSAMethods.cipherPubKeyCliNoPadding(domain, getPublicKey());
@@ -232,18 +232,36 @@ public class PassManagerClient{
 		String send_username = byteToString(c_username);
 		String send_timestamp = byteToString(c_timestamp);
 		String message = "";
+		int seqNum;
 
-		int seqNum =  serversNums.get(inter);
+		if(test==false){
+			seqNum = serversNums.get(inter);
+		}
+		else{
+			seqNum = 0;
+		}
+		
 
 
 		if((!pass.equals(""))&&(!timestamp.equals(""))) {
 			// For GetTimestamps or receivePassword messages
 			byte[] c_password = RSAMethods.cipherPubKeyCliPadding(pass, getPublicKey());
 			String send_password = byteToString(c_password);
-			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
+			if (test==false){
+				message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
+			}
+			else{
+				message = publicKey + "-" + String.valueOf(seqNum+1) + "-SecretKey-" + send_domain + "-" + send_username + "-" + send_password + "-" + send_timestamp;
+			}
 		}
 		else {
-			message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username;
+			if(test==false){
+				message = publicKey + "-" + String.valueOf(seqNum+1) + "-" + byteToString(RSAMethods.cipherPubKeyCliPadding(byteToString(serversList.get(inter).getEncoded()), serverKey)) + "-" + send_domain + "-" + send_username;
+			}
+			else{
+				message = publicKey + "-" + String.valueOf(seqNum+1) + "-SecretKey-" + send_domain + "-" + send_username;
+		
+			}
 		}
 
 		String signature = DigitalSignature.getSignature(stringToByte(message), getPrivateKey());
@@ -308,11 +326,16 @@ public class PassManagerClient{
 		String sig = parts[3];
 		String mac = parts[4];
 		SecretKey secretKey;
+		try{
+            serverKey = getServerPublicKey(serverPubKey);
+        }
+        catch (Exception e){
+            // Register failing test case
+        }
 		if(test == true) {
 			secretKey = sk;
 		}
 		else {
-			serverKey = getServerPublicKey(serverPubKey);
 			byte[] secKeyByte = RSAMethods.decipher(secKey, getPrivateKey());
 			String secretKeyStr = new String(secKeyByte, "UTF-8");
 			secretKey = new SecretKeySpec(stringToByte(secretKeyStr), 0, stringToByte(secretKeyStr).length, "HmacMD5");
@@ -349,7 +372,7 @@ public class PassManagerClient{
 		final ConcurrentHashMap<Integer,String> mapReadResponses = new ConcurrentHashMap<Integer, String>();
 		for(PassManagerInterface server: serversNums.keySet()){
 			final PassManagerInterface serverInt = server;
-			final String message = messageToSend(domain, username, pass, newTimestamp, serverInt);
+			final String message = messageToSend(domain, username, pass, newTimestamp, serverInt, false);
 			final String typeRequest = mode;
 			Thread t = new Thread(new Runnable(){
 				@Override
