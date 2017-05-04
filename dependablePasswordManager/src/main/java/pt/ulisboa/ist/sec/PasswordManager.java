@@ -36,7 +36,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 	public PasswordManager (int registryPort) throws RemoteException,IOException, NoSuchAlgorithmException,InvalidKeySpecException {
 		setPublicKey();
 		createLog(registryPort);
-}
+	}
 
 	public void createLog(int registryPort) throws SecurityException,IOException {
 
@@ -138,7 +138,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 				if(Integer.parseInt(seqNum) == Integer.parseInt(requestNonce)) {
 
 					logger.info("Nonce confirmed!\n");
-					savePasswordMap(key,domain,username,pass,timestampFinal);
+					savePasswordMap(key,domain,username,pass,timestampFinal,secretKey);
 					ConcurrentHashMap<SecretKey, String> hash = getRegisteredUsers().get(key);
 					hash.put(secretKey,requestNonce);
 					getRegisteredUsers().put(key, hash);
@@ -171,13 +171,13 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		}
 	}
 
-	public String savePasswordMap(String key, String domain, String username, String password, String timestamp) throws RemoteException {
+	public String savePasswordMap(String key, String domain, String username, String password, String timestamp, SecretKey secretKey) throws RemoteException {
 		if (getRegisteredUsers().containsKey(key) && key!= null) {
 			ConcurrentHashMap<Combination, String> domainsMap;
 			Combination combination = new Combination (domain,username,timestamp);
 			if (tripletMap.get(key)!= null){
 				domainsMap = tripletMap.get(key);
-				String updated = updatePassword(combination, domainsMap, password);
+				String updated = updatePassword(combination, domainsMap, password, key, secretKey);
 				System.out.println(updated);
 				if (updated.equals("Done")){
 					logger.info("Combination domain: "+domain+" ; username: "+username+" ; password: "+password+" successfully updated on server!\n");
@@ -310,11 +310,19 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 		return null;
 	}
 
-	public String updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass){
+	public String updatePassword(Combination c,ConcurrentHashMap<Combination,String> userMap,String pass, String key, SecretKey secretKey){
 		for(Combination combinationSaved : userMap.keySet()){
 			if (c.equalsTo(combinationSaved)){
-				// TIAGO -> trata aqui da condicao de desempate sff
-				if (c.getTimeStamp() >= combinationSaved.getTimeStamp()){
+				if(c.getTimeStamp() == combinationSaved.getTimeStamp()){
+					for(Map.Entry<SecretKey, String> entry : registeredUsers.get(key).entrySet()){
+						if(entry.getKey().equals(secretKey)){
+							userMap.remove(combinationSaved);
+							userMap.put(c,pass);
+							return "Done";
+						}
+					}
+				}
+				else if (c.getTimeStamp() >= combinationSaved.getTimeStamp()){
 					userMap.remove(combinationSaved);
 					userMap.put(c,pass);
 					return "Done";
