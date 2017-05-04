@@ -18,5 +18,5 @@ To Run:
 1) Go to the project folder on the terminal and run the following command (creates 1 client and 4 servers):
       - sh autoSetup.sh
 
-2) Insert KeyStore spassword "sec" when prompted on each Server.      
+2) Insert KeyStore password "sec" when prompted on each Server.      
 
