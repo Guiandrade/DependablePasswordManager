@@ -165,7 +165,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 			String mac = RSAMethods.generateMAC(secretKey, msgToSend);
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 			logger.info("Error: Digital Signature not verified from savePassword request of user with key undefined \n");
 			return "Error-Error-Error-Error";
 		}
@@ -280,7 +280,7 @@ public class PasswordManager extends UnicastRemoteObject implements PassManagerI
 
 			return msgToSend + "-" + mac;
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 			logger.info("Error: Digital Signature not verified.\n");
 			return "Error-Error-Error-Error";
 		}
