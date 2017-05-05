@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Script to setup keyStore with 5 keyPairs, 3 servers and 3 clients on the DependablePasswordManager Project
+# Script to setup keyStore with 5 keyPairs, 4 servers and 1 client on the DependablePasswordManager Project
 
 # Create 4 servers
 cd dependablePasswordManager
