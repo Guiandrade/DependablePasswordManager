@@ -18,7 +18,6 @@ To Run:
 1) Go to the project folder on the terminal and run the following command (creates 1 client and 4 servers):
       - sh autoSetup.sh
 
-<<<<<<< HEAD
 2) Insert KeyStore spassword "sec" when prompted on each Client.
 
 Other commands:
@@ -51,7 +50,6 @@ mvn compile test
 (located at: dependablePasswordManagerClient/src/test/java/pt/ulisboa/ist/sec/ServerTest.java)
 cd dependablePasswordManagerClient
 mvn compile test
-=======
-2) Insert KeyStore password "sec" when prompted on each Server.      
->>>>>>> 1d42f2a865301a25738af9b4631849ac16390b47
+
+Note: Insert KeyStore password "sec" when prompted on each Server.      
 
